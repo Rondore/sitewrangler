@@ -1,0 +1,6 @@
+#!/usr/bin/env python3
+
+from libsw import build_index, nagios
+
+index = build_index.Index()
+index.register_builder( nagios.NagiosBuilder() )

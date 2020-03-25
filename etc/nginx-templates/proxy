@@ -1,0 +1,82 @@
+# Domain   : DOMAINNAMEE
+# User     : USERNAMEE
+# Template : proxy
+# Field    : PROXYIPP : 192.168.0.1
+# Field    : PROXYPORTT : 80
+
+
+proxy_cache_path /usr/local/nginx/cache/USERNAMEE levels=1 keys_zone=USERNAMEE:128m inactive=1h;
+
+limit_req_zone $binary_remote_addr zone=UNDERDOMAINN:1m rate=15r/m;
+
+server {
+    listen LOCALIPP:80 ;
+
+    server_name DOMAINNAMEE www.DOMAINNAMEE;
+
+    root HOMEDIRRpublic_html;
+
+    gzip on;
+    etag on;
+    gzip_proxied any;
+    gzip_comp_level 3;
+    gzip_buffers 16 8k;
+    gzip_http_version 1.1;
+    gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript;
+    gzip_vary on;
+
+    proxy_cache USERNAMEE;
+    proxy_ignore_headers Cache-Control Expires ;
+    proxy_cache_valid 200 14400s;
+    proxy_cache_valid 406 0s;
+    proxy_cache_valid 404 10s;
+    proxy_cache_valid 500 0;
+    proxy_cache_use_stale updating error timeout http_502 http_503 http_504;
+    proxy_cache_lock on;
+    proxy_cache_key "$scheme$request_method$host$request_uri";
+    proxy_cache_convert_head on;
+
+    modsecurity_rules_file "/opt/sitewrangler/etc/modsec/sites/DOMAINNAMEE";
+
+    rewrite ^/webmail/?$ https://DOMAINNAMEE:PROXYPORTT/ permanent;
+
+    tcp_nodelay off;
+    client_max_body_size 128M;
+
+    if ($request_uri ~ "^(/wp-admin|/administrator|/admin|/user|/wp-cron\.php|/.*login\.php|/opcache\.php|/xmlrpc\.php|.*/phpinfo\.php)") {
+        set $cache_bypass 1;
+    }
+    index index.php;
+
+    location / {
+        add_header X-Proxy-Cache $upstream_cache_status;
+
+        proxy_set_header Host DOMAINNAMEE;
+        proxy_pass http://PROXYIPP:PROXYPORTT;
+    }
+
+    location ~ ^/purge(/.*) {
+        proxy_cache_purge USERNAMEE "$scheme$request_method$host$1";
+    }
+}
+
+server {
+
+    listen LOCALIPP:80;
+
+    server_name webmail.DOMAINNAMEE mail.DOMAINNAMEE;
+
+
+    location ~ "^/(\.well-known\/|[A-Fa-f0-9]{32}.txt$)" {
+        root HOMEDIRRpublic_html;
+    }
+
+    location / {
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_pass http://LOCALIPP:PROXYPORTT/;
+    }
+}

@@ -1,0 +1,10 @@
+--with-openssl=/usr/local
+--with-jpeg-dir=/usr
+--with-png-dir=/usr
+--with-libxml-dir=/usr
+--with-pcre-regex
+--with-curl=/usr/local/include/curl
+--enable-zip
+--with-gd
+--with-zlib-dir
+--with-freetype-dir

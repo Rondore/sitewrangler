@@ -1,0 +1,2 @@
+--enable-standalone-module
+--with-curl=/usr/local/

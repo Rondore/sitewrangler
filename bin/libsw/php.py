@@ -1,0 +1,954 @@
+#!/usr/bin/env python3
+
+import inquirer
+import glob
+import os
+import subprocess
+import re
+import requests
+import tarfile
+import wget
+import datetime
+import stat
+import shutil
+import pwd
+from shutil import copyfile
+from libsw import logger, curl, file_filter, version, builder, settings, service, user, input_util
+
+# enable_legacy_versions = settings.get_bool('enable_php_legacy_versions')
+php71version = '7.1.33' # 18 Dec 2019
+php70version = '7.0.33' # 10 Jan 2019
+php56version = '5.6.40' # 10 Jan 2019
+
+# enable_super_legacy_versions = settings.get_bool('enable_php_super_legacy_versions')
+php55version = '5.5.38' # 21 Jul 2016
+php54version = '5.4.45' # 03 Sep 2015
+php53version = '5.3.29' # 14 Aug 2014
+php52version = '5.2.17' # 06 January 2011
+php51version = '5.1.6' # 24 Aug 2006
+php50version = '5.0.5' # 05 Sep 2005
+php44version = '4.4.9' # 07 Aug 2008
+php43version = '4.3.11' # 31 Mar 2005
+php42version = '4.2.3' # 6 Sep 2002
+php41version = '4.1.2' # 12 March 2002
+php40version = '4.0.6' # 23 June 2001
+php30version = '3.0.18' # 20 Oct 2000
+
+enabled_versions_file = settings.get('install_path') + 'etc/current-php-versions'
+
+def restart_service(version, log=logger.Log(False)):
+    """
+    Restart a given PHP service.
+
+    Args:
+        version - The PHP subversion to start (such as 7.3)
+        log (optional) - An open log file to log to
+    """
+    service.restart('php-' + version + '-fpm', log)
+
+def get_installed_version(sub_version):
+    """
+    Get the full version installed for a given subversion.
+
+    Args:
+        sub_version - The first two numbers in a PHP version
+    """
+    return subprocess.getoutput("/opt/php-" + sub_version + "/bin/php -v 2>/dev/null | grep '^PHP " + sub_version + "' | awk '{print $2}'")
+
+def get_versions(excluded_array=[]):
+    """
+    Get an array of installed PHP versions.
+
+    Args:
+        excluded_array - (optional) An array of PHP versions to exclude from the array
+    """
+    versions = []
+    if os.path.exists(enabled_versions_file):
+        with open(enabled_versions_file) as version_file:
+            for line in version_file:
+                line = line.replace("\n", "").replace("\r", "")
+                if line not in excluded_array:
+                    versions.append(line)
+    return versions
+
+def select_version(excluded_array=[]):
+    """
+    Have the user select a PHP subversion, optionally excluding certain
+    subversions.
+
+    Args:
+        excluded_array - (optional) A list of PHP subversions to exclude
+    """
+    versions = get_versions(excluded_array)
+    questions = [
+        inquirer.List('ver',
+                    message="Select PHP Version",
+                    choices=versions
+                )
+    ]
+    return inquirer.prompt(questions)['ver']
+
+version_cache = False
+def select_updated_version():
+    """
+    Prompt the user to select a PHP version from those avaliable at php.net.
+    """
+    global version_cache
+    if not version_cache:
+        versions = get_updated_versions()
+        questions = [
+            inquirer.List('ver',
+                        message="Select PHP Version",
+                        choices=versions
+                    )
+        ]
+        version_cache = inquirer.prompt(questions)['ver']
+    return version_cache
+
+def get_enabled_vhost_path(version, domain):
+    """
+    Get the path for an enabled PHP vhost file regardless of wether or not it exists.
+
+    Args:
+        version - The PHP version used in the file path
+        domain - The domain used in the file path
+    """
+    return '/opt/php-' + version + '/etc/php-fpm.d/' + domain + '.conf'
+
+def get_disabled_vhost_path(version, domain):
+    """
+    Get the path for a disabled PHP vhost file regardless of wether or not it exists.
+
+    Args:
+        version - The PHP version used in the file path
+        domain - The domain used in the file path
+    """
+    return '/opt/php-' + version + '/etc/php-fpm.d/' + domain + '.conf.disabled'
+
+def get_vhost_path(version, domain):
+    """
+    Get the path of the vhost file associated with a domain. If no vhost file is
+    found the enabled path is returned.
+
+    Args:
+        version - The PHP version used in the file path
+        domain - The domain used in the file path
+    """
+    enabled_path = get_enabled_vhost_path(version, domain)
+    disabled_path = get_disabled_vhost_path(version, domain)
+    if not os.path.exists(enabled_path) and os.path.exists(disabled_path):
+        return disabled_path
+    return enabled_path
+
+def make_vhost(user, domain, php_version):
+    """
+    Create a new PHP vhost file and restart the appropriate PHP service.
+
+    Args:
+        user - The system user who's home directory stores site files
+        domain - The domain associated with the site
+        php_version - The PHP version to use
+    """
+    template = open(settings.get('install_path') + 'etc/php-fpm-site', 'r')
+    vhost_path = get_enabled_vhost_path(php_version, domain)
+    vhost_dir = os.path.dirname(vhost_path)
+    if not os.path.exists(vhost_dir):
+        os.makedirs(vhost_dir)
+    with open(vhost_path, 'w') as host:
+        for line in template:
+            line = line.replace('USERNAME', user, 10000)
+            host.write(line)
+    add_logrotate_file(domain)
+    print('Created ' + vhost_path)
+    restart_service(php_version)
+    set_sys_user_version(user, php_version)
+
+def enable_vhost(domain):
+    """
+    Remove the suffix ".disabled" from a vhost file and restart the appropriate
+    PHP service, thereby enabling the site/file.
+
+    Args:
+        domain - The domain to enable
+    """
+    php_version = get_site_version(domain)
+    if php_version == False:
+        return False
+    source = get_disabled_vhost_path(php_version, domain)
+    target = source[:-9] # to trim off '.disabled'
+    os.rename(source, target)
+    restart_service(php_version)
+    return True
+
+def disable_vhost(domain):
+    """
+    Append the suffix ".disabled" to a vhost file and restart the appropriate
+    PHP service, thereby disabling the site/file.
+
+    Args:
+        domain - The domain to disable
+    """
+    php_version = get_site_version(domain)
+    if php_version == False:
+        return False
+    source = get_enabled_vhost_path(php_version, domain)
+    target = source + '.disabled'
+    os.rename(source, target)
+    restart_service(php_version)
+    return True
+
+def remove_vhost(domain):
+    """
+    Delete the PHP vhost file associated with a domain and then restart the
+    appropriate PHP service.
+
+    Args:
+        domain - Delete the file associated with this domain
+    """
+    php_version = get_site_version(domain)
+    if php_version == False:
+        return False
+    enabled_path = get_enabled_vhost_path(php_version, domain)
+    disabled_path = get_disabled_vhost_path(php_version, domain)
+    removed = False
+    if os.path.exists(enabled_path):
+        os.remove(enabled_path)
+        removed = True
+    if os.path.exists(disabled_path):
+        os.remove(disabled_path)
+        removed = True
+    if removed:
+        restart_service(php_version)
+    remove_logrotate_file(domain)
+    return removed
+
+def edit_vhost(domain):
+    """
+    Allow the user to edit a vhost file with the system text edior, restart the
+    appropriate PHP service if modified.
+
+    Args:
+        domain - The domain associated with the PHP vhost file
+    """
+    php_version = get_site_version(domain)
+    if php_version == False:
+        return False
+    path = get_vhost_path(php_version, domain)
+    if input_util.edit_file(path):
+        print('Restarting php-' + php_version + '-fpm to apply changes.')
+        restart_service(php_version)
+
+def user_from_domain(domain, php_version=False):
+    """
+    Get the system user associated with a domain based on the contents of the
+    domain's PHP vhost file.
+
+    Args:
+        domain - The domain used in finding the system user
+        php_version - (optional) The PHP to use to access the vhost file
+    """
+    if php_version == False:
+        php_version = get_site_version(domain)
+    path = get_vhost_path(php_version, domain)
+    with open(path) as vhost:
+        for line in vhost:
+            if line.startswith('listen =') or line.startswith('listen='):
+                path = line.split('=')[1].strip()
+                if ( path.startswith('"') and path.endswith('"') ) \
+                        or ( path.startswith("'") and path.endswith("'") ):
+                    path = path[1:-1]
+                if path.startswith('/home/'):
+                    username = path.split('/')[2]
+                    return username
+    return False
+
+def get_site_version(domain):
+    """
+    Get the PHP version currently in use for a given site.
+
+    Args:
+        domain - The domain used in finding the system user
+    """
+    avaliable_versions = get_versions()
+    # Search for enabled configuration files
+    for ver in avaliable_versions:
+        if os.path.exists('/opt/php-' + ver + '/etc/php-fpm.d/' + domain + '.conf'):
+            return ver
+    # Search for disabled configuration files
+    for ver in avaliable_versions:
+        if os.path.exists('/opt/php-' + ver + '/etc/php-fpm.d/' + domain + '.conf.disabled'):
+            return ver
+    return False
+
+def set_sys_user_version(username, version):
+    """
+    Modify a system user's path so that a specific version of php is used by
+    default for that user.
+
+    Args:
+        username - The username of the system user
+        version - The PHP version to use
+    """
+    user_info = pwd.getpwnam(username)
+    os.setegid(user_info.pw_gid)
+    os.seteuid(user_info.pw_uid)
+    try:
+        target = user.home_dir(username) + '.bashrc'
+        new_content = ''
+        file_filter.UpdateSection(
+                target,
+                '# START PHP VERSION PATH',
+                '# END PHP VERSION PATH',
+                'export PATH=/opt/php-' + version + '/bin' + os.pathsep + '$PATH'
+            ).run()
+        link_dir = '/home/' + username + '/.local/bin/'
+        link_path = link_dir + 'php'
+        target_path = '/opt/php-' + version + '/bin/php'
+        if os.path.exists(link_path):
+            os.unlink(link_path)
+        if not os.path.exists(link_dir):
+            os.makedirs(link_dir)
+        os.symlink(target_path, link_path)
+    finally:
+        os.setegid(0)
+        os.seteuid(0)
+
+def get_conf_files():
+    """
+    Get an array of all enabled configuration files.
+
+    Return:
+        An array of dictionaries with the keys: version, file, fullPath
+    """
+    avaliable_versions = get_versions()
+    sites = []
+    for ver in avaliable_versions:
+        for file in glob.glob('/opt/php-' + ver + '/etc/php-fpm.d/*.conf'):
+            sites.append( {"version": ver, "file": file[27:-5], "fullPath": file} )
+    sites = sorted(sites, key=lambda k: k['file'])
+    return sites
+
+def get_disabled_conf_files():
+    """
+    Get an array of all disabled configuration files.
+
+    Return:
+        An array of dictionaries with the keys: version, file, fullPath
+    """
+    avaliable_versions = get_versions()
+    sites = []
+    for ver in avaliable_versions:
+        for file in glob.glob('/opt/php-' + ver + '/etc/php-fpm.d/*.conf.disabled'):
+            sites.append( {"version": ver, "file": file[27:-14], "fullPath": file} )
+    sites = sorted(sites, key=lambda k: k['file'])
+    return sites
+
+def select_conf(query_message):
+    """
+    Prompt the user to select an enabled PHP configuration file.
+
+    Args:
+        query_message - The message to display to the user in the prompt
+    """
+    sites = get_conf_files()
+    display_sites = []
+    for site in sites:
+        display_sites.append('(' + site['version'] + ') ' + site['file'])
+    questions = [
+        inquirer.List('f',
+                    message=query_message,
+                    choices=display_sites
+                )
+    ]
+    conf_file_text = inquirer.prompt(questions)['f']
+    return sites[display_sites.index(conf_file_text)]
+
+def select_disabled_conf(query_message):
+    """
+    Prompt the user to select a disabled PHP configuration file.
+
+    Args:
+        query_message - The message to display to the user in the prompt
+    """
+    sites = get_disabled_conf_files()
+    display_sites = []
+    for site in sites:
+        display_sites.append('(' + site['version'] + ') ' + site['file'])
+    questions = [
+        inquirer.List('f',
+                    message=query_message,
+                    choices=display_sites
+                )
+    ]
+    conf_file_text = inquirer.prompt(questions)['f']
+    return sites[display_sites.index(conf_file_text)]
+
+def change_version(domain, old_version, new_version):
+    """
+    Change the PHP version used for a domain.
+
+    Args:
+        domain - The domain of the site to change
+        old_version - The current PHP version
+        new_version - The PHP version to change the site to
+    """
+    os.rename('/opt/php-' + old_version + '/etc/php-fpm.d/' + domain + '.conf', '/opt/php-' + new_version + '/etc/php-fpm.d/' + domain + '.conf')
+    username = user_from_domain(domain)
+    set_sys_user_version(username, new_version)
+
+    print('Restarting PHP...')
+    restart_service(old_version)
+    restart_service(new_version)
+    print('Done')
+
+def get_updated_versions():
+    """Get the full version numbers of versions avaliable at php.net."""
+    request = requests.get('https://www.php.net/downloads.php')
+    regex = re.compile(r'.*/distributions/php-([0-9\.]*)\.tar\.bz2.*')
+    vers = []
+    for line in request.text.splitlines():
+        match = regex.match(line)
+        if match == None:
+            continue
+        match = match.group(1)
+        if len(match) > 0:
+            vers.append(match)
+    if settings.get_bool('enable_php_legacy_versions'):
+        vers.append(php71version)
+        vers.append(php70version)
+        vers.append(php56version)
+    if settings.get_bool('enable_php_super_legacy_versions'):
+        vers.append(php55version)
+        vers.append(php54version)
+        vers.append(php53version)
+        vers.append(php52version)
+        vers.append(php51version)
+        vers.append(php50version)
+        vers.append(php44version)
+        vers.append(php43version)
+        vers.append(php42version)
+        vers.append(php41version)
+        vers.append(php40version)
+        vers.append(php30version)
+    return vers
+
+class AddPid(file_filter.FileFilter):
+    """Append a line to a PHP vhost file to have PHP create a pid file."""
+    def filter_stream(self, in_stream, out_stream):
+        search = re.compile(r'^(\s*;?\s*)(pid = run/php-fpm\.pid.*)')
+        add_line = True
+        for line in in_stream:
+            line, count = search.subn('\2', line)
+            if count > 0:
+                add_line = False
+            out_stream.write(line)
+        if add_line:
+            out_stream.write('pid = run/php-fpm.pid\n')
+        return add_line
+
+class AddMemcacheIni(file_filter.FileFilter):
+    """Append a line for Memcache in a php.ini file."""
+    def filter_stream(self, in_stream, out_stream):
+        search = re.compile(r'^zend_extension=opcache\.so$')
+        add_line = True
+        for line in in_stream:
+            if search.match(line):
+                add_line = False
+            out_stream.write(line)
+        if add_line:
+            out_stream.write('zend_extension=opcache.so')
+        return add_line
+
+def deploy_environment(versions, log):
+    """
+    Install a PHP systemd init file if needed, then start the appropriate PHP
+    version.
+
+    Args:
+        version - The PHP version to setup
+        log - An open log to write to
+    """
+    bin_path = '/usr/local/bin/php-' + versions['sub']
+    bin_link_exists = os.path.islink(bin_path) or os.path.isfile(bin_path)
+    if not bin_link_exists:
+        os.symlink('/opt/php-' + versions['sub'] + '/bin/php', bin_path)
+    copyfile('/usr/local/src/php-' + versions['full'] + '/php.ini-production', '/opt/php-' + versions['sub'] + '/lib/php.ini')
+    #file_filter.filter_file('/opt/php-' + versions['sub'] + '/lib/php.ini', filter_add_memcache_ini)
+    AddMemcacheIni('/opt/php-' + versions['sub'] + '/lib/php.ini').run()
+
+    fpm_conf_name = '/opt/php-' + versions['sub'] + '/etc/php-fpm.conf'
+    copyfile(fpm_conf_name + '.default', fpm_conf_name)
+    file_filter.ReplaceRegex(fpm_conf_name, re.compile('^;?pid\s+='), 'pid = run/php-fpm.pid\n', 1).run()
+    include_line = 'include=/opt/php-' + versions['sub'] + '/etc/php-fpm.d/*.conf'
+    file_filter.AppendUnique(fpm_conf_name, include_line, True).run()
+
+    AddPid(fpm_conf_name).run()
+
+    if not os.path.exists(primary_logrotate_file()):
+        write_primary_logrotate()
+
+    systemd_file = '/lib/systemd/system/php-' + versions['sub'] + '-fpm.service'
+
+    if os.path.isfile(systemd_file):
+        restart_service(versions['sub'], log)
+    else:
+        with open(systemd_file, 'w+') as unit_file:
+            unit_file.write('[Unit]\n')
+            unit_file.write('Description=The PHP $subversion FastCGI Process Manager\n')
+            unit_file.write('After=network.target\n')
+            unit_file.write('\n')
+            unit_file.write('[Service]\n')
+            unit_file.write('Type=simple\n')
+            unit_file.write('PIDFile=/opt/php-' + versions['sub'] + '/var/run/php-fpm.pid\n')
+            unit_file.write('ExecStart=/opt/php-' + versions['sub'] + '/sbin/php-fpm --nodaemonize --fpm-config /opt/php-' + versions['sub'] + '/etc/php-fpm.conf\n')
+            unit_file.write('ExecReload=/bin/kill -USR2 \$MAINPID\n')
+            unit_file.write('Restart=always')
+            unit_file.write('RestartSec=3')
+            unit_file.write('\n')
+            unit_file.write('[Install]\n')
+            unit_file.write('WantedBy=multi-user.target\n')
+
+        service.reload_init(log)
+        service.enable('php-' + versions['sub'] + '-fpm', log)
+        service.start('php-' + versions['sub'] + '-fpm', log)
+
+        from libsw import firewall
+        firewall.writepignore()
+        log.run('lfd', '-r')
+
+def remove_environment(subversion):
+    """
+    Remove a version of PHP from the system.
+
+    Args:
+        subversion - The first two numbers in the PHP version
+    """
+    fullversion = get_installed_version(subversion)
+    service.stop('php-' + subversion + '-fpm')
+    service.disable('php-' + subversion + '-fpm')
+    binfile = '/usr/local/bin/php-' + subversion
+    if os.path.exists(binfile):
+        os.unlink(binfile)
+    installpath = '/opt/php-' + subversion + '/'
+    if os.path.exists(installpath):
+        shutil.rmtree(installpath)
+    servicefile = '/lib/systemd/system/php-' + subversion + '-fpm.service'
+    if os.path.exists(servicefile):
+        os.remove(servicefile)
+    service.reload_init()
+    sourcepath = '/usr/local/src/php-' + fullversion + '/'
+    if os.path.exists(sourcepath):
+        shutil.rmtree(sourcepath)
+
+def fetch_memcache_source(version, build_dir):
+    """
+    Fetch the source code for memcached.
+
+    Args:
+        version - The PHP version to build memcached against
+        build_dir - The directory to save the memcached source files
+    """
+    tarname = build_dir + 'php' + version + '.zip'
+    wget.download('https://github.com/php-memcached-dev/php-memcached/archive/php' + version + '.zip', tarname)
+    import zipfile
+    with zipfile.ZipFile(tarname,'r') as zip:
+        zip.extractall(build_dir)
+    os.remove(tarname)
+    return build_dir + 'php-memcached-php' + version
+
+def build_memcache(versions, log):
+    """
+    Fetch the source code for memcached and compile it.
+
+    Args:
+        versions - The versions array for the PHP version to build memcached
+            against
+        log - An open log to write to
+    """
+    build_path = '/usr/local/src/php-' + versions['full'] + '/'
+    if not os.path.exists(build_path):
+        os.mkdir(build_path)
+    build_path = build_path + 'php-memcache/'
+    if not os.path.exists(build_path):
+        os.mkdir(build_path)
+    source_dir = fetch_memcache_source(versions['major'], build_path)
+    old_pwd = os.getcwd()
+    os.chdir(source_dir)
+
+    lib_path = subprocess.getoutput("whereis libmemcached | cut -d ':' -f2 | cut -d ' ' -f2") + '/'
+    log.run(['/opt/php-' + versions['sub'] + '/bin/phpize'])
+    log.run(['./configure', '--with-php-config=/opt/php-' + versions['sub'] + '/bin/php-config', '--with-libmemcached-dir=' + lib_path])
+    make_ret_val = log.run(['make', '-l', settings.get('max_build_load')])
+    if make_ret_val != 0:
+        log.log('memcache make command failed. Skipping memcache.')
+    else:
+        log.run(['make', 'install'])
+        if not settings.get_bool('build_server'):
+            log.run(['make', '-l', settings.get('max_build_load'), 'clean'])
+    os.chdir(old_pwd)
+
+def detect_distro_code():
+    """
+    Attempt to determin the code that corresponds to the system's operating
+    system to be used in building uw-imap.
+    """
+    distro_name = builder.get_distro()
+    if ( distro_name == 'debian' or
+            distro_name == 'ubuntu' ):
+        return 'ldb'
+    elif ( distro_name == 'centos' or
+            distro_name == 'rhel' ):
+        # version = int(builder.get_distro_version())
+        # if version >= 7:
+        #     return 'lrh'
+        # elif version >= 5:
+        #     return 'lr5'
+        return 'lr5'
+    elif distro_name == 'macos':
+        return 'oxp' # MacOS with PAM
+    elif distro_name == 'cygwin':
+        return 'cyg'
+    elif distro_name == 'freebsd':
+        return 'bsf'
+
+def logrotate_file(domain):
+    """
+    Get the logrotate configuration filename associated with a domain.
+
+    Args:
+        domain - The domain name
+    """
+    return settings.get('install_path') + 'etc/logrotate.d/php-sites/' + domain
+
+def add_logrotate_file(domain):
+    """
+    Write out a configuration file for logrotated to rotate a website's php log
+    files.
+
+    Args:
+        domain - The domain name
+    """
+    if not os.path.exists(primary_logrotate_file()):
+        write_primary_logrotate()
+    user = user_from_domain(domain)
+    filename = logrotate_file(domain)
+    dirpath = os.path.dirname(filename)
+    if not os.path.exists(dirpath):
+        os.makedirs(dirpath)
+    with open(filename, 'w+') as output:
+        output.write('/home/' + user + '/logs/php.*.log {\n\
+  weekly\n\
+  rotate 52\n\
+  dateext\n\
+  compress\n\
+  copytruncate\n\
+  missingok\n\
+}')
+
+def remove_logrotate_file(domain):
+    """
+    Remove the configuration file for logrotated to a given domain.
+
+    Args:
+        domain - The domain name
+    """
+    filename = logrotate_file(domain)
+    if os.path.exists(filename):
+        os.remove(filename)
+        return True
+    return False
+
+def primary_logrotate_file():
+    return settings.get('install_path') + 'etc/logrotate.d/php.conf'
+
+def write_primary_logrotate():
+    """
+    Write out a configuration file for logrotated to rotate the global php log
+    files. Also add an include directive that will include all website
+    logrotated files.
+
+    Args:
+        domain - The domain name
+    """
+    install_path = settings.get('install_path')
+    filename = primary_logrotate_file()
+    version_list = get_versions()
+    if len(version_list) == 0:
+        if os.path.exists(filename):
+            os.remove(filename)
+    else:
+        with open(filename, 'w+') as output:
+            output.write('include ' + install_path + 'etc/logrotate.d/php-sites/*\n\n')
+            for version in version_list:
+                output.write('/opt/php-' + version + '/var/log/*.log {\n\
+  weekly\n\
+  rotate 52\n\
+  dateext\n\
+  compress\n\
+  copytruncate\n\
+  missingok\n\
+  postrotate\n\
+    /bin/kill -USR1 `cat /opt/php-' + version + '/var/run/php-fpm.pid 2>/dev/null` 2>/dev/null || true\n\
+  endscript\n\
+}\n\n')
+
+def get_status_array():
+    """
+    Get the status output for each enabled version of PHP.
+
+    Return:
+        A two-dimensional array where each child element contains the following:
+            A php version number
+            The status output for the assicated PHP version
+    """
+    statuses = []
+    for ver in get_versions():
+        subversion = version.get_tree(ver)['sub']
+        #status = subprocess.getoutput("service php-" + subversion + "-fpm status | grep '\s*[Aa]ctive:\s' | sed -E 's/\s*[Aa]ctive:\s//'")
+        status = service.status("php-" + subversion + "-fpm")
+        statuses.append([subversion, status])
+    return statuses
+
+class ImapBuilder(builder.AbstractGitBuilder):
+    """A class to build UW IMAP from source."""
+    def __init__(self):
+        self.distros = False
+        super().__init__('uw-imap')
+
+    def check_build(self):
+        return os.path.exists(self.source_dir() + 'tmail/tmail.o')
+
+    def get_source_url(self):
+        return 'https://github.com/uw-imap/imap.git'
+
+    def make(self, log):
+        return log.run(['make', '-l', settings.get('max_build_load'), self.get_distro(), 'IP=6'])
+
+    def get_distro(self):
+        distro = settings.get('imap_distro')
+        if distro == 'unset':
+            detected_distro = detect_distro_code()
+            if detected_distro:
+                distro = detected_distro
+                settings.set('imap_distro', distro)
+        if distro == 'unset':
+            distro = self.select_distro('Select your current operating system')
+            settings.set('imap_distro', distro)
+        return distro
+
+    def get_distro_list(self):
+        if self.distros != False:
+            return self.distros
+        self.distros = []
+        with open('/usr/local/src/imap/Makefile') as makefile:
+            specials = False
+            for line in makefile:
+                if specials and len(line.strip()) == 0:
+                    break
+                if '# The following ports are bundled:' in line:
+                    specials = True
+                    continue
+                if specials:
+                    line = line.strip()[2:]
+                    distro_code = line[:3]
+                    distro_name = line[4:]
+                    if ' ' in distro_code:
+                        continue
+                    self.distros.append( ( distro_code, distro_name ) )
+        return self.distros
+
+    def select_distro(self, query_message):
+        distro_list = []
+        code_list = []
+        for code, name in self.get_distro_list():
+            code_list.append(code)
+            distro_list.append('(' + code + ')  ' + name)
+        questions = [
+            inquirer.List('d',
+                        message=query_message,
+                        choices=distro_list
+                    )
+        ]
+        distro_list_text = inquirer.prompt(questions)['d']
+        return code_list[distro_list.index(distro_list_text)]
+
+    def install(self, log):
+        pass
+
+    def populate_config_args(self): # hack: using config methods to call sed in makefile
+        return ['sed', '-i', r's/^\(EXTRAAUTHENTICATORS=\).*$/\1gss/', '/usr/local/src/imap/Makefile']
+
+    def source_dir(self):
+        return self.build_dir + 'imap/'
+
+    def fetch_source(self, source, log):
+        super().fetch_source(source, log)
+        target_dir = self.source_dir()
+        log.run(['sed', '-i', r's~SSLLIB=/[^ ]* ~SSLLIB=/usr/local/lib ~', target_dir + 'Makefile'])
+        log.run(['sed', '-i', r's~SSLINCLUDE=/[^ ]* ~SSLINCLUDE=/usr/local/include/openssl ~', target_dir + 'Makefile'])
+
+    def dependencies(self):
+        return ['openssl']
+
+class PhpBuilder(builder.AbstractArchiveBuilder):
+    """A class to build PHP from source."""
+    def __init__(self, version_str):
+        self.versions = version.get_tree(version_str)
+        if self.versions['sub'] == self.versions['full']:
+            self.versions = version.get_tree(self.get_updated_version())
+        super().__init__('php-' + self.versions['sub'])
+
+    def get_installed_version(self):
+        return get_installed_version(self.versions['sub'])
+
+    def get_updated_version_list(self):
+        return get_updated_versions()
+
+    def get_updated_version(self):
+        update_versions = self.get_updated_version_list()
+        regex = re.compile(self.versions['sub'].replace('.', r'\.'))
+        new_ver = False
+        for v in update_versions:
+            if regex.match(v):
+                new_ver = v
+        return new_ver
+
+    def get_source_url(self):
+        return 'https://www.php.net/distributions/php-' + self.versions['full'] + '.tar.bz2'
+
+    def dependencies(self):
+        return ['openssl', 'uw-imap', 'curl']
+
+    # def get_config_arg_file(self):
+    #     config_folder = settings.get('install_path') + 'etc/build-config/'
+    #     return [
+    #         config_folder + self.slug,
+    #         config_folder + self.slug + '-' + self.versions['major'],
+    #         config_folder + self.slug + '-' + self.versions['sub'],
+    #     ]
+
+    def get_config_arg_file(self):
+        elements = []
+        config_folder = settings.get('install_path') + 'etc/build-config/'
+        no_version_file = config_folder + 'php'
+        if os.path.exists(no_version_file):
+            elements.append(no_version_file)
+        search = no_version_file + '-*'
+        print('looking for config files: ' + search)
+        install_segments = self.versions['full'].split('.')
+        for entry in glob.glob(search):
+            version_name = entry[len(no_version_file)+1:]
+            if version.is_search_in_version(version_name ,self.versions):
+                elements.append(entry)
+        return elements
+
+    def install(self, log):
+        super().install(log)
+        if self.versions['major'] == '7':
+            build_memcache(self.versions, log)
+        deploy_environment(self.versions, log)
+
+    def build(self):
+        if not os.path.exists(self.build_dir + 'imap/c-client/imap4r1.o'):
+            ImapBuilder().build()
+        self.source_version = self.versions['full']
+        return super().build()
+
+    def deploy(self, remote_address, log):
+        self.source_version = self.versions['full']
+        return super().deploy(remote_address, log)
+
+
+    def populate_config_args(self, command=['./configure']):
+        command.append('--prefix=/opt/php-' + self.versions['sub'])
+        command.append('--with-mysql-sock=' + settings.get('mysql_socket'))
+        return super().populate_config_args(command)
+
+    def source_dir(self):
+        return self.build_dir + 'php-' + self.source_version + '/'
+
+    def log_name(self):
+        version = self.source_version
+        if version == False:
+            version = self.versions['full']
+        return settings.get('install_path') + 'log/build/php-' + version + '.log'
+
+    def update_if_needed(self):
+        old = self.get_installed_version()
+        new = self.get_updated_version()
+        if version.first_is_higher(new, old):
+            self.versions = version.get_tree(new)
+            return build()
+        return False, False
+
+    def cleanup_old_versions(self, log):
+        found = False
+        found_version = False
+        for logname in builder.find_old_build_elements(settings.get('install_path') + 'log/build/php-' + self.versions['sub'] + '.', '.log'):
+            os.remove(logname)
+            log.log("Removed old log file " + logname)
+        for folder in builder.find_old_build_elements('/usr/local/src/php-' + self.versions['sub'] + '.', '/'):
+            shutil.rmtree(folder)
+            log.log("Removed old source directory " + folder)
+
+def install_wp_cli():
+    """Install or reinstall the WordPress CLI."""
+    if not os.path.exists('/opt/wp-cli/'):
+        os.mkdir('/opt/wp-cli/')
+    install_file = '/opt/wp-cli/wp-cli.phar'
+    source = 'https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar'
+    wget.download(source, install_file)
+    print('')
+    s = os.stat(install_file)
+    os.chmod(install_file, s.st_mode | stat.S_IEXEC)
+    symlink_path = '/usr/local/bin/wp'
+    if not os.path.exists(symlink_path):
+        os.symlink(install_file, symlink_path)
+
+def is_same_subversion(versions, version_string):
+    """Determine if two versions have the same first two numbers."""
+    ver2 = version.get_tree(version_string)
+    return versions['sub'] == ver2['sub']
+
+class EnableVersion(file_filter.FileFilter):
+    """Add a PHP version to the list of enabled PHP versions"""
+    def __init__(self, version_string):
+        self.versions = version.get_tree(version_string)
+        super().__init__(enabled_versions_file, True)
+
+    def filter_stream(self, in_stream, out_stream):
+        updated = False
+        skip = False
+        for line in in_stream:
+            line_ver = version.get_tree(line)
+            if self.versions['sub'] == line_ver['sub']:
+                if line.strip() == self.versions['full']:
+                    skip = True
+                    out_stream.write(line)
+                else:
+                    out_stream.write(self.versions['full'] + '\n')
+                    updated = True
+            elif version.first_is_higher(self.versions['full'], line_ver['full']) and not updated:
+                out_stream.write(self.versions['full'] + '\n')
+                updated = True
+                out_stream.write(line)
+            else:
+                out_stream.write(line)
+        if not updated:
+            out_stream.write(self.versions['full'] + '\n')
+        return not skip
+
+class DisableVersion(file_filter.FileFilter):
+    """Remove a PHP version from the list of enabled PHP versions"""
+    def __init__(self, version_string):
+        self.versions = version.get_tree(version_string)
+        super().__init__(enabled_versions_file)
+
+    def filter_stream(self, in_stream, out_stream):
+        removed = False
+        for line in in_stream:
+            if is_same_subversion(self.versions, line):
+                removed = True
+            else:
+                out_stream.write(line)
+        return removed

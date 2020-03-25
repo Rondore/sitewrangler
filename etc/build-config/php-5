@@ -1,0 +1,13 @@
+--with-mysql
+--with-jpeg-dir=/usr
+--with-png-dir=/usr
+--with-libxml-dir=/usr
+--with-pcre-regex
+--with-curl=/usr/local/include/curl
+--enable-zip
+--with-gd
+--enable-gd-native-ttf
+--with-zlib-dir
+--with-freetype-dir
+--with-mcrypt
+--with-imap-ssl
