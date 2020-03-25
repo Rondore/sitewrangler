@@ -9,6 +9,7 @@ def _help():
     print('sw wp clone  # Clone an existing WordpPress site to a new user and domain')
     print('sw wp login [example.com]  # Create a one-time use login link')
     print('sw wp cron [example.com]  # Create a real cron job for a WordPress site and disable the fake cron')
+    print('sw wp listupdate [example.com]  # Create a real cron job for a WordPress site and disable the fake cron')
 index = command_index.CategoryIndex('wp', _help)
 
 def _list(domain):
@@ -49,6 +50,50 @@ def _list_info(domain):
         print(tabulate(table, headers=['Domain', 'Version', 'Cron Type']))
         print()
 index.register_command('listinfo', _list_info)
+
+def _listupdate(domain):
+    from libsw import wordpress
+    sites = [domain]
+    all_up_to_date = True
+    single = False
+    if domain == False:
+        sites = wordpress.list_installations()
+    else:
+        single = True
+    if len(sites) == 0:
+        print('No WordPress sites found')
+    else:
+        print()
+        for site in sites:
+            outdated = wordpress.get_outdated(site)
+            core = len(outdated[0]) > 0
+            theme_count = len(outdated[1])
+            plugin_count = len(outdated[2])
+            if theme_count + plugin_count > 0 or core:
+                all_up_to_date = False
+                space = ''
+                if not single:
+                    print('== ' + site + ' ==')
+                    space = '  '
+                if core:
+                    print(space + '-- Core Wordpress --')
+                    print(space + '   ' + outdated[0])
+                if theme_count > 0:
+                    print(space + '-- Themes --')
+                    for theme in outdated[1]:
+                        print(space + '   ' + theme)
+                if plugin_count > 0:
+                    print(space + '-- Plugins --')
+                    for plugin in outdated[2]:
+                        print(space + '   ' + plugin)
+        print()
+    if all_up_to_date:
+        if single:
+            print(domain + ' is up-to-date')
+        else:
+            print('Everything WordPress is up-to-date')
+index.register_command('listupdate', _listupdate)
+index.register_command('list-update', _listupdate)
 
 def _addwordpress():
     from libsw import wordpress

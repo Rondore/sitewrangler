@@ -334,7 +334,7 @@ def add_cron(sys_user):
         #print(command)
         subprocess.getoutput(command)
         print('Created system cron')
-    subprocess.getoutput("su - " + sys_user + " -c \"cd ~/public_html/; wp config set 'DISABLE_WP_CRON' true\" ")
+    subprocess.getoutput("su - " + sys_user + " -c \"wp config set --path='~/public_html/' 'DISABLE_WP_CRON' true\" ")
     print('Disabled WordPress cron')
     return not found
 
@@ -365,3 +365,11 @@ def create_one_time_login(domain):
     # Reset environment
     os.seteuid(whoami)
     print('Go to: http://' + domain + '/wp-autologin-' + passname + '.php?pass=' + passcode)
+
+def get_outdated(domain):
+    docroot = nginx.docroot_from_domain(domain)
+    sys_user = nginx.user_from_domain(domain)
+    core = subprocess.getoutput("su - " + sys_user + " -c 'wp core check-update --path=\"" + docroot + "\" --fields=update_type --format=csv 2>/dev/null | tail -n +2'")
+    themes = subprocess.getoutput("su - " + sys_user + " -c 'wp theme list --path=\"" + docroot + "\" --update=available --fields=name --format=csv 2>/dev/null | tail -n +2'")
+    plugins =  subprocess.getoutput("su - " + sys_user + " -c 'wp plugin list --path=\"" + docroot + "\" --update=available --fields=name --format=csv 2>/dev/null | tail -n +2'")
+    return [core, themes.splitlines(), plugins.splitlines()]
