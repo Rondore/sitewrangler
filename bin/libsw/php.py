@@ -35,8 +35,6 @@ php41version = '4.1.2' # 12 March 2002
 php40version = '4.0.6' # 23 June 2001
 php30version = '3.0.18' # 20 Oct 2000
 
-enabled_versions_file = settings.get('install_path') + 'etc/current-php-versions'
-
 def restart_service(version, log=logger.Log(False)):
     """
     Restart a given PHP service.
@@ -63,13 +61,14 @@ def get_versions(excluded_array=[]):
     Args:
         excluded_array - (optional) An array of PHP versions to exclude from the array
     """
+    from libsw import build_index
+    save_file = settings.get('install_path') + 'etc/enabled-packages'
+    slugs = file_filter.get_trimmed_lower_file_as_array(save_file)
     versions = []
-    if os.path.exists(enabled_versions_file):
-        with open(enabled_versions_file) as version_file:
-            for line in version_file:
-                line = line.replace("\n", "").replace("\r", "")
-                if line not in excluded_array:
-                    versions.append(line)
+    for slug in slugs:
+        if slug[:4] == 'php-':
+            ver = slug[4:]
+            versions.append(ver)
     return versions
 
 def select_version(excluded_array=[]):
@@ -422,7 +421,7 @@ def get_updated_versions(force_refresh=False):
             use_cache = False
     else:
         if not os.path.exists(cache_dir):
-            os.mkdir(cache_dir)
+            os.makedirs(cache_dir)
         use_cache = False
 
     if use_cache:
@@ -936,46 +935,3 @@ def is_same_subversion(versions, version_string):
     """Determine if two versions have the same first two numbers."""
     ver2 = version.get_tree(version_string)
     return versions['sub'] == ver2['sub']
-
-class EnableVersion(file_filter.FileFilter):
-    """Add a PHP version to the list of enabled PHP versions"""
-    def __init__(self, version_string):
-        self.versions = version.get_tree(version_string)
-        super().__init__(enabled_versions_file, True)
-
-    def filter_stream(self, in_stream, out_stream):
-        updated = False
-        skip = False
-        for line in in_stream:
-            line_ver = version.get_tree(line)
-            if self.versions['sub'] == line_ver['sub']:
-                if line.strip() == self.versions['full']:
-                    skip = True
-                    out_stream.write(line)
-                else:
-                    out_stream.write(self.versions['full'] + '\n')
-                    updated = True
-            elif version.first_is_higher(self.versions['full'], line_ver['full']) and not updated:
-                out_stream.write(self.versions['full'] + '\n')
-                updated = True
-                out_stream.write(line)
-            else:
-                out_stream.write(line)
-        if not updated:
-            out_stream.write(self.versions['full'] + '\n')
-        return not skip
-
-class DisableVersion(file_filter.FileFilter):
-    """Remove a PHP version from the list of enabled PHP versions"""
-    def __init__(self, version_string):
-        self.versions = version.get_tree(version_string)
-        super().__init__(enabled_versions_file)
-
-    def filter_stream(self, in_stream, out_stream):
-        removed = False
-        for line in in_stream:
-            if is_same_subversion(self.versions, line):
-                removed = True
-            else:
-                out_stream.write(line)
-        return removed

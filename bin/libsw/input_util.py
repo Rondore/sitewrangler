@@ -167,14 +167,14 @@ def select_multiple_from(query_message, options):
     exit = ' ** Done ** '
     selected = []
     while True:
-        options = [exit]
-        for op in slug_list:
+        display_options = [exit]
+        for op in options:
             if op not in selected:
-                options.append(op)
+                display_options.append(op)
         questions = [
             inquirer.List('s',
                         message=query_message,
-                        choices=options
+                        choices=display_options
                     )
         ]
         just_selected = inquirer.prompt(questions)['s']

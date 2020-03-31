@@ -6,8 +6,6 @@ def _help():
     print('sw php list [`disabled`]  # List PHP sites along with PHP versions and system usernames')
     print('sw php (add|create) [example.com [example_user [7.3]]]  # Create a PHP site, optionally specifying domain, system username, and PHP version')
     print('sw php change [example.com [7.3]]  # Change the PHP version of a site, optionally specifying domain, and PHP version')
-    print('sw php install [7.3]  # Installs PHP of the specified version')
-    print('sw php uninstall [7.3]  # Removes PHP of the specified version')
     print('sw php disable [example.com]  # Disable a PHP vhost')
     print('sw php enable [example.com]  # Enable a PHP vhost')
     print('sw php edit [example.com]  # Edit a PHP vhost and restart the appropriate PHP version upon exit')
@@ -90,28 +88,16 @@ def _list(disabled):
         print('No PHP sites found')
 index.register_command('list', _list)
 
-def _install(ver):
-    from libsw import php, version
-    from commands import build_com
-    if ver and ver.lower() == 'latest':
-        ver = php.get_updated_versions()[0]
-        ver = version.get_tree(ver)['sub']
-    if not ver:
-        ver = php.select_updated_version()
-        ver = version.get_tree(ver)['sub']
-    php.EnableVersion(ver).run()
-    build_com._update(False)
-index.register_command('install', _install)
-
-def _uninstall(subversion):
-    from libsw import php, version
-    if subversion:
-        subversion = version.get_tree(subversion)['sub']
-    else:
-        subversion = php.select_version()
-    php.DisableVersion(subversion).run()
-    php.remove_environment(subversion)
-index.register_command('uninstall', _uninstall)
+#TODO Move this to a universal uninstall function
+# def _uninstall(subversion):
+#     from libsw import php, version
+#     if subversion:
+#         subversion = version.get_tree(subversion)['sub']
+#     else:
+#         subversion = php.select_version()
+#     php.DisableVersion(subversion).run()
+#     php.remove_environment(subversion)
+# index.register_command('uninstall', _uninstall)
 
 def _change(domain, more):
     from libsw import php

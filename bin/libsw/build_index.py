@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
 
-import glob
-import os
-import inquirer
-import subprocess
-from libsw import curl, nginx, openssl, php, postgresql, file_filter
-
 class Index():
     """
     A class for tracking all builders avaliable to Site Wrangler. Each builder
@@ -36,6 +30,13 @@ class Index():
 # this import line needs to be after the declaration
 # for Index()
 from builders import *
+
+import glob
+import os
+import inquirer
+import subprocess
+from libsw import curl, nginx, openssl, php, postgresql, file_filter, input_util
+
 
 def registered_slugs():
     """
