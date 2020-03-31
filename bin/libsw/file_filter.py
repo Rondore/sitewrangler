@@ -24,18 +24,18 @@ class FileFilter(ABC):
 
 	def run(self):
 		dirpath = os.path.dirname(self.filename)
-		retval = False
+		change = False
 		if not os.path.exists(self.filename):
 			with open(self.filename, 'w+') as f:
 				pass
 		with open(self.filename) as source, NamedTemporaryFile('w', dir=dirpath, delete=False) as outfile:
-			retval = self.filter_stream(source, outfile)
-		if retval != False:
+			change = self.filter_stream(source, outfile)
+		if change != False:
 			with open(outfile.name) as inflow, open(self.filename, 'w+') as outflow:
 				for line in inflow:
 					outflow.write(line)
 		os.remove(outfile.name)
-		return retval != False
+		return change != False
 
 class UpdateSection(FileFilter):
 	"""
@@ -155,3 +155,41 @@ class ReplaceRegex(FileFilter):
 			else:
 				out_stream.write(line)
 		return found > 0
+
+def get_trimmed_file_as_array(filename, filter=False):
+	"""
+	Gets the contents of a file as an array. Returns false if file is not
+	found. Trailing white space at the starte and ends of lines are ignored.
+	Empty lines are also ignored.
+
+	Args:
+		filename - The name of the file to read
+		filter - If a function is given, the trimmed line is fed to the
+			filter function and the result is stored in the array.
+	"""
+	file_array = False
+	with open(filename, 'r') as list_file:
+		file_array = []
+		for line in list_file:
+			line = line.strip()
+			if len(line) > 0:
+				if callable(filter):
+					line = filter(line)
+				file_array.append(line)
+	return file_array
+
+def get_trimmed_lower_file_as_array(filename, filter=False):
+	"""
+	Same as get_trimmed_file_as_array, but it also converts the text to lower case.
+
+	Args:
+		filename - The name of the file to read
+		filter - If a function is given, the trimmed line is fed to the
+			filter function and the result is stored in the array.
+	"""
+	def to_lower(text):
+		text = text.lower()
+		if callable(filter):
+			text = filter(text)
+		return text
+	return get_trimmed_file_as_array(filename, to_lower)

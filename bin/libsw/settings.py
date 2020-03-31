@@ -52,6 +52,15 @@ def get_bool(setting_name):
         or setting == 'on' \
         or setting == 'yes'
 
+def get_num(setting_name):
+    """
+    Same as get(setting_name), but converts the return value to a Integer value.
+
+    Args:
+        setting_name - The index key to look up the setting.
+    """
+    return int(get(setting_name))
+
 class UpdateSetting(file_filter.FileFilter):
     """A FileFilter to change a setting."""
     def __init__(self, name, value):
@@ -144,6 +153,7 @@ def _get_default_settings():
 
         'deploy_openssl': False,
         'deploy_curl': False,
+        'build_cache_age': 43200,
 
         'enable_php_legacy_versions': False,
         'enable_php_super_legacy_versions': False,

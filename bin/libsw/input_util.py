@@ -139,3 +139,47 @@ def prompt_value(key, value):
         inquirer.Text('query', message='Enter ' + key, default=value),
     ]
     return inquirer.prompt(questions)['query']
+
+def select_from(query_message, options):
+    """
+    Have the user select from an Array of Strings.
+
+    Args:
+        query_message - A query message to display to the user when selecting
+        options - The options to select from
+    """
+    questions = [
+        inquirer.List('s',
+                    message=query_message,
+                    choices=slug_list
+                )
+    ]
+    return inquirer.prompt(questions)['s']
+
+def select_multiple_from(query_message, options):
+    """
+    Have the user select multiple entries from an Array of Strings.
+
+    Args:
+        query_message - A query message to display to the user when selecting
+        options - The options to select from
+    """
+    exit = ' ** Done ** '
+    selected = []
+    while True:
+        options = [exit]
+        for op in slug_list:
+            if op not in selected:
+                options.append(op)
+        questions = [
+            inquirer.List('s',
+                        message=query_message,
+                        choices=options
+                    )
+        ]
+        just_selected = inquirer.prompt(questions)['s']
+        if just_selected == exit:
+            break
+        else:
+            selected.append(just_selected)
+    return selected

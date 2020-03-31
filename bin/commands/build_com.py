@@ -3,6 +3,8 @@
 from libsw import input_util, command_index
 
 def _help():
+    print('sw build install [slug_list]  # Enable a software package and rund a build for it')
+    print('sw build disable [slug_list]  # Disable a software package but do not remove it from the system')
     print('sw build update [force]  # Update softare sources and build anthing that needs building')
     print('sw build checkupdate  # Check for updates to software sources and print a list of slugs that need updating')
     print('sw build list  # List all software slugs enabled on the system')
@@ -20,7 +22,8 @@ def _update(force):
             force = False
     from libsw import build_queue, build_index
     queue = build_queue.new_queue(force)
-    build_index.Index().populate_builders(queue)
+    build_index.populate_enabled(queue)
+    build_index.populate_dependant_builders(queue)
     if queue.failed():
         print("One or more builds failed.")
     elif queue.run() == 0:
@@ -31,7 +34,8 @@ index.register_command('upgrade', _update) # for yum/dnf habits :)
 def _checkupdate():
     from libsw import build_queue, build_index
     queue = build_queue.new_queue(False)
-    build_index.Index().populate_builders(queue)
+    build_index.populate_enabled(queue)
+    build_index.populate_dependant_builders(queue)
     update_list = queue.run_check()
     if len(update_list) == 0:
         print("All software is already up-to-date.")
@@ -58,14 +62,13 @@ def _run(first, more):
     queue = build_queue.TargetedQueue(slug_list)
     build_index.populate_slug_list(queue, slug_list)
     build_index.populate_dependant_builders(queue)
-    # index.populate_builders(queue)
     if queue.run() == 0:
         print("Unable to build " + slug_list[0])
 index.register_command('run', _run)
 
 def _list():
     from libsw import build_index
-    slug_list = build_index.enabled_slugs()
+    slug_list = build_index.registered_slugs()
     for slug in slug_list:
         print(slug)
 index.register_command('list', _list)
@@ -81,7 +84,7 @@ index.register_command('log', _log)
 
 def _freeze(slug):
     from libsw import builder, build_index
-    slug_list = build_index.enabled_slugs()
+    slug_list = build_index.registered_slugs()
     if not slug:
         slug = build_index.select_slug('Select a package to freeze')
     if slug not in slug_list:
@@ -142,3 +145,67 @@ def _install_prebuilt(slug, more):
         builder.install(log)
 index.register_command('installprebuilt', _install_prebuilt)
 index.register_command('install-prebuilt', _install_prebuilt)
+
+def _install(slug, more):
+    from libsw import build_index, build_queue
+    slug_list = []
+    if slug != False:
+        slug = slug.lower()
+        if build_index.get_builder(slug) != False:
+            slug_list.append(slug)
+        else:
+            print('"' + slug + '" not found, skipping...')
+    if more != False and len(more) > 0:
+        for sub_slug in more:
+            sub_slug = sub_slug.lower()
+            if build_index.get_builder(sub_slug) != False:
+                slug_list.append(sub_slug)
+            else:
+                print('"' + sub_slug + '" not found, skipping...')
+    if len(slug_list) == 0:
+        slug_list = build_index.select_slugs("Select software to install")
+    count = 0
+    for entry in slug_list:
+        if build_index.enable_slug(entry):
+            print('Enabled ' + entry)
+            count += 1
+        else:
+            print(entry + ' already enabled')
+    if count > 0:
+        suffix = 'package'
+        if count > 1:
+            suffix += 's'
+        print('Enabled ' + str(count) + ' ' + suffix)
+        queue = build_queue.BuildQueue(slug_list)
+        build_index.populate_slug_list(queue, slug_list)
+        build_index.populate_dependant_builders(queue)
+        queue.run()
+index.register_command('install', _install)
+
+def _disable(slug, more):
+    from libsw import build_index
+    count = 0
+    if slug != False:
+        if build_index.disable_slug(slug):
+            count += 1
+        else:
+            print('"' + slug + '" not found, skipping...')
+    if more != False and len(more) > 0:
+        for sub_slug in more:
+            if build_index.disable_slug(sub_slug):
+                count += 1
+            else:
+                print('"' + sub_slug + '" not found, skipping...')
+    if count == 0:
+        slug_list = build_index.select_slugs("Select software to disable")
+        count = 0
+        for entry in slug_list:
+            if build_index.disable_slug(sub_slug):
+                count += 1
+            else:
+                print('"' + entry + '" not expressly installed, skipping...')
+    suffix = 'packages'
+    if count == 1:
+        suffix += 'package'
+    print('Enabled ' + str(count) + ' ' + suffix)
+index.register_command('disable', _disable)
