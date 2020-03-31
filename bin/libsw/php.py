@@ -410,7 +410,7 @@ def get_updated_versions(force_refresh=False):
         force_refresh - (optional) When set to True, do not use cached values
     """
     vers = []
-    cache_dir = settings.get('install_path') + 'cache/'
+    cache_dir = settings.get('install_path') + 'var/cache/'
     cache_file = cache_dir + 'php-versions'
     use_cache = force_refresh == False
 
