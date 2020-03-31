@@ -12,6 +12,7 @@ import datetime
 import stat
 import shutil
 import pwd
+import time
 from shutil import copyfile
 from libsw import logger, curl, file_filter, version, builder, settings, service, user, input_util
 
@@ -401,36 +402,62 @@ def change_version(domain, old_version, new_version):
     restart_service(new_version)
     print('Done')
 
-def get_updated_versions():
-    """Get the full version numbers of versions avaliable at php.net."""
-    request = requests.get('https://www.php.net/downloads.php')
-    regex = re.compile(r'.*/distributions/php-([0-9\.]*)\.tar\.bz2.*')
+def get_updated_versions(force_refresh=False):
+    """
+    Get the full version numbers of versions avaliable at php.net.
+
+    Args:
+        force_refresh - (optional) When set to True, do not use cached values
+    """
     vers = []
-    for line in request.text.splitlines():
-        match = regex.match(line)
-        if match == None:
-            continue
-        match = match.group(1)
-        if len(match) > 0:
-            vers.append(match)
-    if settings.get_bool('enable_php_legacy_versions'):
-        vers.append(php71version)
-        vers.append(php70version)
-        vers.append(php56version)
-    if settings.get_bool('enable_php_super_legacy_versions'):
-        vers.append(php55version)
-        vers.append(php54version)
-        vers.append(php53version)
-        vers.append(php52version)
-        vers.append(php51version)
-        vers.append(php50version)
-        vers.append(php44version)
-        vers.append(php43version)
-        vers.append(php42version)
-        vers.append(php41version)
-        vers.append(php40version)
-        vers.append(php30version)
-    return vers
+    cache_dir = settings.get('install_path') + 'cache/'
+    cache_file = cache_dir + 'php-versions'
+    use_cache = force_refresh == False
+
+    if os.path.exists(cache_file):
+        max_age = settings.get_num('build_cache_age')
+        mod_time = os.stat(cache_file).st_mtime
+        age = time.time() - mod_time
+        if age > max_age:
+            use_cache = False
+    else:
+        if not os.path.exists(cache_dir):
+            os.mkdir(cache_dir)
+        use_cache = False
+
+    if use_cache:
+        return file_filter.get_trimmed_lower_file_as_array(cache_file)
+    else:
+        request = requests.get('https://www.php.net/downloads.php')
+        regex = re.compile(r'.*/distributions/php-([0-9\.]*)\.tar\.bz2.*')
+        for line in request.text.splitlines():
+            match = regex.match(line)
+            if match == None:
+                continue
+            match = match.group(1)
+            if len(match) > 0:
+                vers.append(match)
+        if settings.get_bool('enable_php_legacy_versions'):
+            vers.append(php71version)
+            vers.append(php70version)
+            vers.append(php56version)
+        if settings.get_bool('enable_php_super_legacy_versions'):
+            vers.append(php55version)
+            vers.append(php54version)
+            vers.append(php53version)
+            vers.append(php52version)
+            vers.append(php51version)
+            vers.append(php50version)
+            vers.append(php44version)
+            vers.append(php43version)
+            vers.append(php42version)
+            vers.append(php41version)
+            vers.append(php40version)
+            vers.append(php30version)
+        with open(cache_file, 'w+') as cache_write:
+            for v in vers:
+                cache_write.write(v + "\n")
+        return vers
 
 class AddPid(file_filter.FileFilter):
     """Append a line to a PHP vhost file to have PHP create a pid file."""
