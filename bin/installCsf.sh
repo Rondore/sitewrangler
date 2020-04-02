@@ -51,7 +51,7 @@ echo "Enter the two-letter country code(s) you would like to have access \
 to reading and sending email. See this link for codes: \
 https://en.wikipedia.org/wiki/List_of_ISO_3166_country_codes Follow \
 this format:"
-echo 'US,GB,DE'
+echo 'US,CA,JP,GB,DE,IT,ES,RU,CN,UA,BR'
 read -p '(leave blank to allow all countries): ' codes
 if [ ! -z "$codes" ]; then
     sed -Ei '/^([ \s]*)(TCP_IN6?|SMTP_PORTS)/ s/,465//' /etc/csf/csf.conf
@@ -64,10 +64,10 @@ if [ ! -z "$codes" ]; then
     #CC_ALLOW_PORTS = "US"
 fi
 
-echo "\nEnter the country code(s) for which you would like to block all traffic in the same format."
+echo
+echo "Enter the country code(s) for which you would like to block all traffic in the same format."
 read -p '(leave blank to allow all countries): ' codes
 sed -Ei "s/^([ \\s]*)CC_DENY[ \\s]*=.*/\\CC_DENY = \"$codes\"/" /etc/csf/csf.conf
-#CC_DENY = "RU,BR,UA,CN"
 
 nginx_log="/usr/local/nginx/logs/error.log"
 syslog="/etc/csf/csf.syslogs"

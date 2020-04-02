@@ -168,14 +168,15 @@ def get_trimmed_file_as_array(filename, filter=False):
 			filter function and the result is stored in the array.
 	"""
 	file_array = False
-	with open(filename, 'r') as list_file:
-		file_array = []
-		for line in list_file:
-			line = line.strip()
-			if len(line) > 0:
-				if callable(filter):
-					line = filter(line)
-				file_array.append(line)
+	if os.path.exists(filename):
+		with open(filename, 'r') as list_file:
+			file_array = []
+			for line in list_file:
+				line = line.strip()
+				if len(line) > 0:
+					if callable(filter):
+						line = filter(line)
+					file_array.append(line)
 	return file_array
 
 def get_trimmed_lower_file_as_array(filename, filter=False):
