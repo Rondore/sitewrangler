@@ -65,10 +65,11 @@ def get_versions(excluded_array=[]):
     save_file = settings.get('install_path') + 'etc/enabled-packages'
     slugs = file_filter.get_trimmed_lower_file_as_array(save_file)
     versions = []
-    for slug in slugs:
-        if slug[:4] == 'php-':
-            ver = slug[4:]
-            versions.append(ver)
+    if slugs != False:
+        for slug in slugs:
+            if slug[:4] == 'php-':
+                ver = slug[4:]
+                versions.append(ver)
     return versions
 
 def select_version(excluded_array=[]):
