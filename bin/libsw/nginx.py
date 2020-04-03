@@ -661,7 +661,7 @@ class ModSecurityNginxBuilder(AbstractNginxModuleBuilder):
         return 'https://github.com/SpiderLabs/ModSecurity-nginx.git'
 
     def dependencies(self):
-        return []
+        return ['modsec']
 
     def source_dir(self):
         return self.build_dir + 'ModSecurity-nginx/'

@@ -18,10 +18,11 @@ def is_frozen(slug):
     Returns True if the slug is set to be restricted from updating.
     """
     freeze_file = settings.get('install_path') + 'etc/build-freeze'
-    with open(freeze_file) as frozen:
-        for line in frozen:
-            if slug == line.strip():
-                return True
+    if os.path.exists(freeze_file):
+        with open(freeze_file) as frozen:
+            for line in frozen:
+                if slug == line.strip():
+                    return True
     return False
 
 def freeze(slug):

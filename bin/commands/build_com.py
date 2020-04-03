@@ -170,13 +170,13 @@ def _install(slug, more):
             print('Enabled ' + entry)
             count += 1
         else:
-            print(entry + ' already enabled')
+            print(entry + ' already enabled (run "sw build update" to build)')
     if count > 0:
-        suffix = 'package'
-        if count > 1:
-            suffix += 's'
+        suffix = 'packages'
+        if count == 1:
+            suffix = 'package'
         print('Enabled ' + str(count) + ' ' + suffix)
-        queue = build_queue.BuildQueue(slug_list)
+        queue = build_queue.new_queue(False)
         build_index.populate_slug_list(queue, slug_list)
         build_index.populate_dependant_builders(queue)
         queue.run()
@@ -206,6 +206,6 @@ def _disable(slug, more):
                 print('"' + entry + '" not expressly installed, skipping...')
     suffix = 'packages'
     if count == 1:
-        suffix += 'package'
+        suffix = 'package'
     print('Enabled ' + str(count) + ' ' + suffix)
 index.register_command('disable', _disable)
