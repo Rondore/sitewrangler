@@ -151,7 +151,7 @@ def select_from(query_message, options):
     questions = [
         inquirer.List('s',
                     message=query_message,
-                    choices=slug_list
+                    choices=options
                 )
     ]
     return inquirer.prompt(questions)['s']
