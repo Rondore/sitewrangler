@@ -140,7 +140,7 @@ class ModSecurityRulesetBuilder(builder.AbstractBuilder):
                     if line.startswith('SecRuleEngine '):
                         output.write('SecRuleEngine On\n')
                     elif line.startswith('SecAuditLog '):
-                        output.write('SecAuditLog ' + settings.get('install_path') + 'log/modsec_audit.log\n')
+                        output.write('SecAuditLog ' + settings.get('install_path') + 'var/log/modsec_audit.log\n')
                     else:
                         output.write(line)
             for builder in get_enabled_ruleset_builders():

@@ -17,7 +17,7 @@ fi
 
 folder=$(sw settings list install_path)
 
-grep '^ModSecurity: ' ${folder}log/modsec_audit.log \
+grep '^ModSecurity: ' ${folder}var/log/modsec_audit.log \
     | grep "$regex" \
     | $limit \
     | sed -r "s/^.*\\[$field \"([^\"]*)\".*\$/\\1/" \

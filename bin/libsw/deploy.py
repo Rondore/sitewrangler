@@ -26,7 +26,7 @@ def get_registered_ips():
     return ip_list
 
 def deploy(force):
-    log_path = settings.get('install_path') +  'log/remote-deploy'
+    log_path = settings.get('install_path') +  'var/log/remote-deploy'
     with open(log_path, 'a+') as log_file:
         log = logger.Log(log_file)
         queue = build_queue.new_queue(force)

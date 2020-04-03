@@ -191,11 +191,11 @@ class AbstractBuilder(ABC):
         return retval
 
     def log_name(self):
-        name = settings.get('install_path') + 'log/build/' + self.slug + '.log'
+        name = settings.get('install_path') + 'var/log/build/' + self.slug + '.log'
         return name
 
     def deploy_log_name(self, remote_address):
-        name = settings.get('install_path') + 'log/deploy/' + self.slug + '-' + remote_address + '.log'
+        name = settings.get('install_path') + 'var/log/deploy/' + self.slug + '-' + remote_address + '.log'
         return name
 
     def run_pre_config(self, log):
@@ -365,7 +365,7 @@ class AbstractArchiveBuilder(AbstractBuilder):
         """
         found = False
         found_version = False
-        for log_file in find_old_build_elements(settings.get('install_path') + 'log/build/' + self.slug + '-', '.log'):
+        for log_file in find_old_build_elements(settings.get('install_path') + 'var/log/build/' + self.slug + '-', '.log'):
             os.remove(log_file)
             log.log("Removed old log file " + log_file)
         search = self.source_dir('VERSION')
@@ -387,7 +387,7 @@ class AbstractArchiveBuilder(AbstractBuilder):
     def log_name(self):
         if not self.source_version:
             self.source_version = self.get_updated_version()
-        name = settings.get('install_path') + 'log/build/' + self.slug
+        name = settings.get('install_path') + 'var/log/build/' + self.slug
         if self.source_version and len(self.source_version) > 0:
             name += '-' + self.source_version
         name += '.log'

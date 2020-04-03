@@ -898,7 +898,7 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         version = self.source_version
         if version == False:
             version = self.versions['full']
-        return settings.get('install_path') + 'log/build/php-' + version + '.log'
+        return settings.get('install_path') + 'var/log/build/php-' + version + '.log'
 
     def update_if_needed(self):
         old = self.get_installed_version()
@@ -911,7 +911,7 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
     def cleanup_old_versions(self, log):
         found = False
         found_version = False
-        for logname in builder.find_old_build_elements(settings.get('install_path') + 'log/build/php-' + self.versions['sub'] + '.', '.log'):
+        for logname in builder.find_old_build_elements(settings.get('install_path') + 'var/log/build/php-' + self.versions['sub'] + '.', '.log'):
             os.remove(logname)
             log.log("Removed old log file " + logname)
         for folder in builder.find_old_build_elements('/usr/local/src/php-' + self.versions['sub'] + '.', '/'):

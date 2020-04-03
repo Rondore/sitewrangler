@@ -167,7 +167,7 @@ def check():
     updated files to exim as well as any users that require locally stored
     certificates.
     """
-    with open(settings.install_path + 'log/letsencrypt', 'w+') as log_file:
+    with open(settings.install_path + 'var/log/letsencrypt', 'w+') as log_file:
         log = logger.Log(log_file)
         log.run(['letsencrypt', 'renew'])
         local_count = deploy_locals()
