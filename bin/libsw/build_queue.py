@@ -104,9 +104,13 @@ class BuildQueue():
                 deps = build_tuple[0].dependencies()
                 satisfied = True
                 for dep in deps:
-                    if build_tuple not in target_list: #not builder.builder_array_contains_slug(target_list, dep):
+                    found_dep = False
+                    for builder, status in target_list:
+                        if builder.slug == dep:
+                            found_dep = True
+                            break
+                    if not found_dep:
                         satisfied = False
-                        break
                 if satisfied:
                     target_list.append(build_tuple)
             for build_tuple in target_list:
@@ -114,7 +118,7 @@ class BuildQueue():
                     source_list.remove(build_tuple)
             current_length = len(source_list)
         if len(source_list) > 0:
-            #print('Error: Dependency loop detected.')
+            print('Error: Dependency loop detected.')
             return False
         self.queue = target_list
         return target_list
