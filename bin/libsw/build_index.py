@@ -141,7 +141,8 @@ def populate_enabled(build_queue):
         build_queue - The BuildQueue to hold the enabled builders
     """
     slug_list = enabled_slugs()
-    populate_slug_list(build_queue, slug_list)
+    if slug_list != False:
+        populate_slug_list(build_queue, slug_list)
 
 def populate_slug_list(build_queue, list):
     """
