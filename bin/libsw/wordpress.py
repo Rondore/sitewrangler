@@ -350,7 +350,8 @@ def create_one_time_login(domain):
     passcode = input_util.random_string(40, False)
     passname = input_util.random_string(40, False)
     docroot = nginx.docroot_from_domain(domain)
-    target_file = docroot + 'wp-autologin-' + passname + '.php'
+    target_file = docroot + 'wp-admin/wp-autologin-' + passname + '.php'
+    site_url = get_site_url(sys_user, docroot)
 
     # Set environment
     whoami = os.geteuid()
@@ -364,7 +365,7 @@ def create_one_time_login(domain):
 
     # Reset environment
     os.seteuid(whoami)
-    print('Go to: http://' + domain + '/wp-autologin-' + passname + '.php?pass=' + passcode)
+    print('Go to: ' + site_url + 'wp-admin/wp-autologin-' + passname + '.php?pass=' + passcode)
 
 def get_outdated(domain):
     docroot = nginx.docroot_from_domain(domain)
@@ -373,3 +374,19 @@ def get_outdated(domain):
     themes = subprocess.getoutput("su - " + sys_user + " -c 'wp theme list --path=\"" + docroot + "\" --update=available --fields=name --format=csv 2>/dev/null | tail -n +2'")
     plugins =  subprocess.getoutput("su - " + sys_user + " -c 'wp plugin list --path=\"" + docroot + "\" --update=available --fields=name --format=csv 2>/dev/null | tail -n +2'")
     return [core, themes.splitlines(), plugins.splitlines()]
+
+def get_site_option(sys_user, docroot, option):
+    value = subprocess.getoutput("su - " + sys_user + " -c 'wp option get " + option + " --path=\"" + docroot + "\"' ")
+    return value
+
+def get_site_url(sys_user, docroot):
+    url = get_site_option(sys_user, docroot, 'siteurl')
+    if url[-1] != '/':
+        url += '/'
+    return url
+
+def get_site_home(sys_user, docroot):
+    home = get_site_option(sys_user, docroot, 'home')
+    if home[-1] != '/':
+        home += '/'
+    return home

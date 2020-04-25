@@ -6,8 +6,8 @@ if($_REQUEST['pass'] != 'PASSWORDD'){
 	die("Unauthorized Access");
 }
 
-require('wp-blog-header.php');
-require('wp-includes/pluggable.php');
+require('../wp-blog-header.php');
+require('../wp-includes/pluggable.php');
 $user_info = get_userdata(1);
 // Automatic login //
 $username = $user_info->user_login;
