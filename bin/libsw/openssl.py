@@ -21,10 +21,14 @@ class OpensslBuilder(builder.AbstractArchiveBuilder):
     def get_updated_version(self):
         request = requests.get('https://www.openssl.org/source/')
         regex = re.compile(r'\.tar\.gz')
+        antiregex = re.compile(r'alpha|beta')
         newest = '0.0.0a'
         for line in request.text.splitlines():
             match = regex.search(line)
             if match == None:
+                continue
+            antimatch = antiregex.search(line)
+            if antimatch != None:
                 continue
             ver = re.sub(r'.*href="openssl-([^"]*)\.tar\.gz".*', r'\1', line)
             if ver[:1].isnumeric(): # skip fips links
