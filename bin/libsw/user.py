@@ -106,6 +106,7 @@ def make_user(username):
     gid = getgrnam(username).gr_gid
     if fix_home:
         os.chown(home_directory , uid, gid)
+    os.chmod(home_directory, 0o711)
     make_user_dir(home_directory + 'public_html/', uid, getgrnam('daemon').gr_gid)
     make_user_dir(home_directory + 'mail/', uid, gid)
     make_user_dir(home_directory + 'tmp/', uid, gid)
