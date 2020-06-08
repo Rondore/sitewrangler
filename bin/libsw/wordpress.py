@@ -227,7 +227,7 @@ def make_site(username, domain, php_version, db_conn):
     database_name = username[:18]
     database_user = database_name
     database_pass = input_util.random_string()
-    print("Setting db password to: " + db_password)
+    print("Setting db password to: " + database_pass)
     db.create_database_with_user(database_name, database_user, database_pass, db_conn)
     install_files(username, database_name, database_user, database_pass)
     has_cert = cert_try_loop(domain, username)
@@ -287,7 +287,7 @@ def wizard_make_site():
     print('Wait at least five minutes after changing nameservers to continue with this script.')
     username = user.select_new_username()
     domain = input('New Domain: ')
-    php_version = php.select_version()['file']
+    php_version = php.select_version()
     mydb = db.get_connection()
     is_ssl = make_site(username, domain, php_version, mydb)
     add_cron(username)
