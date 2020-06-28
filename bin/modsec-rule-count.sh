@@ -15,7 +15,7 @@ if [ ! -z "$3" ]; then
     limit="tail -$3"
 fi
 
-folder=$(sw settings list install_path)
+folder=$(sw setting list install_path)
 
 grep '^ModSecurity: ' ${folder}var/log/modsec_audit.log \
     | grep "$regex" \

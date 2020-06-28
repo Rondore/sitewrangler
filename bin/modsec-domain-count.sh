@@ -1,6 +1,6 @@
 #/bin/bash
 
-folder=$(sw settings list install_path)
+folder=$(sw setting list install_path)
 
 grep '^Host: ' ${folder}var/log/modsec_audit.log \
     | sed 's/^Host://' \
