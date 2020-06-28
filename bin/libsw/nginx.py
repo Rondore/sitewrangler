@@ -200,6 +200,7 @@ def add_ssl_to_site_hosts(domain):
     fields, username, domain, template = get_vhost_headers(full_file)
     dash_domain = domain.replace('.', '-')
     under_domain = domain.replace('.', '_')
+    field_needle = re.compile('^# Field')
 
     home = user.home_dir(username)
 
