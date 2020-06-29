@@ -454,10 +454,27 @@ def get_updated_versions(force_refresh=False):
             vers.append(php41version)
             vers.append(php40version)
             vers.append(php30version)
+        if settings.get_bool('enable_php_prerelease_version'):
+            vers = get_prerelease_version(vers)
         with open(cache_file, 'w+') as cache_write:
             for v in vers:
                 cache_write.write(v + "\n")
         return vers
+
+def get_prerelease_version(version_array):
+    request = requests.get('https://downloads.php.net/~pollita/')
+    regex = re.compile(r'.*<a href="php-([0-9\.]*)([a-z]*)([0-9]+)\.tar\.bz2">.*')
+    for line in request.text.splitlines():
+        match = regex.match(line)
+        if match == None:
+            continue
+        main_version = match.group(1)
+        letter = match.group(2)[0]
+        release_number = match.group(3)
+        if len(main_version) > 0:
+            version_array.append(main_version + '.' + letter + '.' + release_number)
+    return version_array
+
 
 class AddPid(file_filter.FileFilter):
     """Append a line to a PHP vhost file to have PHP create a pid file."""
@@ -496,10 +513,18 @@ def deploy_environment(versions, log):
         log - An open log to write to
     """
     bin_path = '/usr/local/bin/php-' + versions['sub']
+    src_dir = versions['full']
+    if '.a.' in src_dir:
+        src_dir = src_dir.replace('.a.', 'alpha')
+    if '.b.' in src_dir:
+        src_dir = src_dir.replace('.b.', 'beta')
+    if '.R.' in src_dir:
+        src_dir = src_dir.replace('.R.', 'RC')
+    src_dir = '/usr/local/src/php-' + src_dir + '/'
     bin_link_exists = os.path.islink(bin_path) or os.path.isfile(bin_path)
     if not bin_link_exists:
         os.symlink('/opt/php-' + versions['sub'] + '/bin/php', bin_path)
-    copyfile('/usr/local/src/php-' + versions['full'] + '/php.ini-production', '/opt/php-' + versions['sub'] + '/lib/php.ini')
+    copyfile(src_dir + 'php.ini-production', '/opt/php-' + versions['sub'] + '/lib/php.ini')
     #file_filter.filter_file('/opt/php-' + versions['sub'] + '/lib/php.ini', filter_add_memcache_ini)
     AddMemcacheIni('/opt/php-' + versions['sub'] + '/lib/php.ini').run()
 
@@ -841,7 +866,16 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         return new_ver
 
     def get_source_url(self):
-        return 'https://www.php.net/distributions/php-' + self.versions['full'] + '.tar.bz2'
+        full_version = self.versions['full']
+        source = 'https://www.php.net/distributions/php-' + full_version + '.tar.bz2'
+        if settings.get_bool('enable_php_prerelease_version'):
+            if '.a.' in full_version:
+                source = 'https://downloads.php.net/~pollita/php-' + full_version.replace('.a.', 'alpha') + '.tar.bz2'
+            if '.b.' in full_version:
+                source = 'https://downloads.php.net/~pollita/php-' + full_version.replace('.b.', 'beta') + '.tar.bz2'
+            if '.R.' in full_version:
+                source = 'https://downloads.php.net/~pollita/php-' + full_version.replace('.R.', 'RC') + '.tar.bz2'
+        return source
 
     def dependencies(self):
         return ['openssl', 'uw-imap', 'curl']
@@ -899,7 +933,15 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         return super().populate_config_args(log, command)
 
     def source_dir(self):
-        return self.build_dir + 'php-' + self.source_version + '/'
+        full_version = self.source_version
+        if settings.get_bool('enable_php_prerelease_version'):
+            if '.a.' in full_version:
+                full_version = full_version.replace('.a.', 'alpha')
+            if '.b.' in full_version:
+                full_version = full_version.replace('.b.', 'beta')
+            if '.R.' in full_version:
+                full_version = full_version.replace('.R.', 'RC')
+        return self.build_dir + 'php-' + full_version + '/'
 
     def log_name(self):
         version = self.source_version

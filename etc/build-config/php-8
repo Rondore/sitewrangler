@@ -1,8 +1,10 @@
+--with-mysqli
+--with-imap-ssl
+--with-kerberos
 --with-openssl
 --with-libxml
 --with-curl
 --with-jpeg
 --with-zip
 --enable-gd
---with-imap-ssl
---with-kerberos
+
