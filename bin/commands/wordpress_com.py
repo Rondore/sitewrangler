@@ -113,7 +113,7 @@ def _createlogin(domain):
         print(domain + ' is not a domain with a valid WordPress installation')
         domain = False
     if domain == False:
-        domain = wordpress.select_installation('Select domain to log in to')
+        domain = wordpress.select_installation('Select a domain to log in to')
     wordpress.create_one_time_login(domain)
 index.register_command('login', _createlogin)
 
@@ -123,7 +123,7 @@ def _cron(domain):
         print(domain + ' is not a domain with a valid WordPress installation')
         domain = False
     if domain == False:
-        domain = wordpress.select_installation('Select domain to add receive the cron')
+        domain = wordpress.select_installation('Select a domain to add a cron job')
     sys_user = nginx.user_from_domain(domain)
     wordpress.add_cron(sys_user)
 index.register_command('cron', _cron)
