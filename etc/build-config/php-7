@@ -1,3 +1,1 @@
 --with-mysqli
---with-imap-ssl=/usr/local/include
---with-kerberos=/usr/local/include

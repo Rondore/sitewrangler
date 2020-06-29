@@ -8,3 +8,5 @@
 --with-gd
 --with-zlib-dir
 --with-freetype-dir
+--with-imap-ssl=/usr/local/include
+--with-kerberos=/usr/local/include
