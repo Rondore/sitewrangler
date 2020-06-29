@@ -164,6 +164,7 @@ def _get_default_settings():
         'db_root_requires_password': False,
         'mysql_socket': '/var/run/mysqld/mysqld.sock',
         'build_server': False,
+        'enable_php_prerelease_version': False,
 
         'compact_help': False
     }
