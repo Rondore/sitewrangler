@@ -802,7 +802,7 @@ class ImapBuilder(builder.AbstractGitBuilder):
     def install(self, log):
         pass
 
-    def populate_config_args(self): # hack: using config methods to call sed in makefile
+    def populate_config_args(self, log): # hack: using config methods to call sed in makefile
         return ['sed', '-i', r's/^\(EXTRAAUTHENTICATORS=\).*$/\1gss/', '/usr/local/src/imap/Makefile']
 
     def source_dir(self):
@@ -855,8 +855,15 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
     #     ]
 
     def get_config_arg_file(self):
-        elements = []
         config_folder = settings.get('install_path') + 'etc/build-config/'
+        return self.get_folder_config_args(config_folder)
+
+    def get_user_config_arg_file(self):
+        config_folder = settings.get('install_path') + 'etc/build-config/user/'
+        return self.get_folder_config_args(config_folder)
+
+    def get_folder_config_args(self, config_folder):
+        elements = []
         no_version_file = config_folder + 'php'
         if os.path.exists(no_version_file):
             elements.append(no_version_file)
@@ -886,10 +893,10 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         return super().deploy(remote_address, log)
 
 
-    def populate_config_args(self, command=['./configure']):
+    def populate_config_args(self, log, command=['./configure']):
         command.append('--prefix=/opt/php-' + self.versions['sub'])
         command.append('--with-mysql-sock=' + settings.get('mysql_socket'))
-        return super().populate_config_args(command)
+        return super().populate_config_args(log, command)
 
     def source_dir(self):
         return self.build_dir + 'php-' + self.source_version + '/'

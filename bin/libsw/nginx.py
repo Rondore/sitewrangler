@@ -614,10 +614,10 @@ class NginxBuilder(builder.AbstractArchiveBuilder):
                 return clean.sub(r'\1', sub_line)
         return False
 
-    def populate_config_args(self, command=['./configure']):
+    def populate_config_args(self, log, command=['./configure']):
         ssl_ver = openssl.OpensslBuilder().get_installed_version()
         command.append('--with-openssl=/usr/local/src/openssl-' + ssl_ver)
-        return super().populate_config_args(command)
+        return super().populate_config_args(log, command)
 
     def get_source_url(self):
         return 'https://nginx.org/download/nginx-' + self.source_version + '.tar.gz'
@@ -644,7 +644,7 @@ class AbstractNginxModuleBuilder(builder.AbstractGitBuilder):
     def make(self, log):
         return 0
 
-    def populate_config_args(self):
+    def populate_config_args(self, log):
         return []
 
     def clean(self, log):

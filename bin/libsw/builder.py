@@ -49,6 +49,24 @@ def list_frozen():
             frozen_list.append(line.strip())
     return frozen_list
 
+def populate_config_arg_file(file_path, config_array, log):
+    if os.path.exists(file_path):
+        with open(file_path) as args:
+            log.log('Reading configuration from ' + file_path)
+            for arg in args:
+                arg = arg.strip()
+                if len(arg) == 0:
+                    continue
+                if arg[0] == '!':
+                    clean_arg = arg[1:]
+                    if clean_arg in config_array:
+                        config_array.remove(clean_arg)
+                    else:
+                        log.log('Unable to remove configure argument ' + clean_arg)
+                else:
+                    config_array.append(arg)
+    return config_array
+
 class AbstractBuilder(ABC):
     """
     An abstract class to build source packages downloaded from tar files.
@@ -131,7 +149,15 @@ class AbstractBuilder(ABC):
         """
         return settings.get('install_path') + 'etc/build-config/' + self.slug
 
-    def populate_config_args(self, command=['./configure']):
+    def get_user_config_arg_file(self):
+        """
+        Returns the name of the file that lists arguments that are passed to
+        the configure command. When overridden, this method can return an array
+        of filenames instead.
+        """
+        return settings.get('install_path') + 'etc/build-config/user/' + self.slug
+
+    def populate_config_args(self, log, command=['./configure']):
         """
         Populates a configure command with it's proper arguments from the
         matching configuration file.
@@ -139,18 +165,41 @@ class AbstractBuilder(ABC):
         Args:
             command - A default configure command array
         """
+        command = self.populate_hard_config_args(log, command)
+        command = self.populate_user_config_args(log, command)
+        return command
+
+    def populate_hard_config_args(self, log, config_array):
+        """
+        Populates a configure command with it's proper arguments from the
+        matching configuration file provided by Site Wrangler.
+
+        Args:
+            command - A default configure command array
+        """
+        log.log('Fetching provided config arguments')
         file_path_list = self.get_config_arg_file()
         if type(file_path_list) is str:
             file_path_list = [file_path_list]
         for file_path in file_path_list:
-            if os.path.exists(file_path):
-                with open(file_path) as args:
-                    for arg in args:
-                        arg = arg.strip()
-                        if len(arg) == 0:
-                            continue
-                        command.append(arg)
-        return command
+            config_array = populate_config_arg_file(file_path, config_array, log)
+        return config_array
+
+    def populate_user_config_args(self, log, config_array):
+        """
+        Populates a configure command with it's proper arguments from the
+        matching configuration file provided by the system adminstrator.
+
+        Args:
+            command - A default configure command array
+        """
+        log.log('Fetching user config arguments')
+        file_path_list = self.get_user_config_arg_file()
+        if type(file_path_list) is str:
+            file_path_list = [file_path_list]
+        for file_path in file_path_list:
+            config_array = populate_config_arg_file(file_path, config_array, log)
+        return config_array
 
     def install(self, log):
         """
@@ -251,7 +300,7 @@ class AbstractBuilder(ABC):
             log.log("Running pre-config")
             self.run_pre_config(log)
             log.log("Getting config arguments")
-            command = self.populate_config_args()
+            command = self.populate_config_args(log)
             if len(command) > 0:
                 log.log("Running configuration")
                 if debug:

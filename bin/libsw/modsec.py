@@ -113,7 +113,7 @@ class ModSecurityRulesetBuilder(builder.AbstractBuilder):
         rules.append('modsec')
         return rules
 
-    def populate_config_args(self):
+    def populate_config_args(self, log):
         return []
 
     def source_dir(self):
@@ -179,7 +179,7 @@ class OwaspBuilder(builder.AbstractGitBuilder, AbstractRuleset):
     def dependencies(self):
         return []
 
-    def populate_config_args(self):
+    def populate_config_args(self, log):
         return []
 
     def source_dir(self):
