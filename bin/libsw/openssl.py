@@ -39,8 +39,8 @@ class OpensslBuilder(builder.AbstractArchiveBuilder):
     def get_source_url(self):
         return 'https://www.openssl.org/source/openssl-' + self.source_version + '.tar.gz'
 
-    def populate_config_args(self):
-        return super().populate_config_args(['./config'])
+    def populate_config_args(self, log):
+        return super().populate_config_args(log, ['./config'])
 
     def install(self, log):
         super().install(log)
