@@ -118,7 +118,7 @@ def make_vhost(username, domain, template_name='php', template_fields=False):
             value = input_util.prompt_value(key, value)
             template_fields.append([key, value])
     if not os.path.exists(modsec_exception_dir):
-        os.mkdir(modsec_exception_dir)
+        os.makedirs(modsec_exception_dir)
     if not os.path.exists(vhost_dir):
         os.makedirs(vhost_dir)
     with open(modsec, 'a+'):
