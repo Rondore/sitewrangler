@@ -486,6 +486,8 @@ http {
 
     http2_idle_timeout 5m;
 
+    include /usr/local/nginx/conf/blocklist.conf;
+
     ##
     # Virtual Host Configs
     ##
@@ -494,6 +496,10 @@ http {
 ''')
         new = "    modsecurity on;\n" + \
             "    modsecurity_rules_file " + settings.get('install_path') + "etc/modsec/rules.conf;\n"
+    blockfile = '/usr/local/nginx/conf/blocklist.conf'
+    if not os.path.isfile(blockfile):
+        with open(blockfile, 'a+'):
+            pass
 
     if os.path.isfile(systemd_file):
         service.restart('nginx', log)
