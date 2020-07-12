@@ -35,7 +35,7 @@ def _add(address):
         print('Account Created.')
     else:
         from libsw import settings
-        print('Error while setting password. Check to see if the account exists in ' + settings.get('mail_shadow_file'))
+        print('Error while creating email account. Check to see if the account exists in ' + settings.get('mail_shadow_file'))
 index.register_command('add', _add)
 index.register_command('create', _add)
 
