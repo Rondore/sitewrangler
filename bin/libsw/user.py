@@ -90,6 +90,20 @@ def make_user_dir(dir, uid, gid):
         os.makedirs(dir)
     os.chown(dir, uid, gid)
 
+def make_user_file(file, uid, gid):
+    """
+    Create a file owned by a user.
+
+    Args:
+        file - The filepath
+        uid - The system user's numerical ID
+        gid - The system group's numerical ID
+    """
+    if not os.path.exists(file):
+        with open(file, 'a+'):
+            pass
+    os.chown(file, uid, gid)
+
 def make_user(username):
     """
     Create a new user with the given username.
@@ -98,6 +112,7 @@ def make_user(username):
         username - The system user
     """
     home_directory = home_dir(username)
+    bash_profile = home_directory + '.bash_profile'
     fix_home = False
     if os.path.exists(home_directory):
         fix_home = True
@@ -112,9 +127,17 @@ def make_user(username):
     make_user_dir(home_directory + 'tmp/', uid, gid)
     make_user_dir(home_directory + 'logs/', uid, gid)
     make_user_dir(home_directory + 'etc/', uid, gid)
-    #TODO
-    #usermod -a -G Debian-exim clamav
-    #/etc/init.d/clamav-daemon restart
+    make_user_file(bash_profile, uid, gid)
+    with open(bash_profile, 'a+') as profile:
+        profile.write('''
+if [ -f ~/.bashrc ]; then
+        . ~/.bashrc
+fi
+
+# User specific environment and startup programs
+export PATH=$PATH:$HOME/.local/bin:$HOME/bin
+
+''')
 
 def remove_user(username, deletefiles):
     """
