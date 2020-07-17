@@ -34,13 +34,13 @@ if [ -e /usr/bin/apt-get ]; then
   fi
 elif [ -e /usr/bin/dnf ]; then
   # Fedora / CentOS 8
-  /usr/bin/dnf install -y gcc gcc-c++ make automake autoconf wget git bind python36 python3-pip libxml2-devel libzip-devel libpng-devel libxslt-devel libjpeg-turbo-devel libpq-devel libtool pcre pcre-devel krb5-devel pam-devel libmemcached-libs autoconf mariadb mariadb-server pkgconf-pkg-config readline-devel clamd clamav-update clamav
+  /usr/bin/dnf install -y gcc gcc-c++ make automake autoconf wget git bind python36 python3-pip libxml2-devel libzip-devel libpng-devel libxslt-devel libjpeg-turbo-devel libpq-devel libtool pcre pcre-devel krb5-devel pam-devel libmemcached-libs autoconf mariadb mariadb-server pkgconf-pkg-config readline-devel clamd clamav-update clamav sqlite-devel
   # libfcgi-dev libfcgi0ldbl libbz2-dev libjpeg-dev libfreetype6-dev certbot letsencrypt GeoIP-devel python-mysql3.connector screen
 elif [ -e /usr/bin/yum ]; then
   # CentOS 7
   /usr/bin/yum install epel-release -y
   /usr/bin/yum update -y
-  /usr/bin/yum install -y gcc gcc-c++ make automake autoconf wget git bind screen python36 python36-pip libxml2-devel libzip-devel libpng-devel libxslt1-devel libjpeg-turbo-devel MySQL-python libtool certbot pcre pcre-devel GeoIP-devel krb5-devel pam-devel libmemcached-dev autoconf mariadb mariadb-server readline-devel clamd clamav-update clamav
+  /usr/bin/yum install -y gcc gcc-c++ make automake autoconf wget git bind screen python36 python36-pip libxml2-devel libzip-devel libpng-devel libxslt1-devel libjpeg-turbo-devel MySQL-python libtool certbot pcre pcre-devel GeoIP-devel krb5-devel pam-devel libmemcached-dev autoconf mariadb mariadb-server readline-devel clamd clamav-update clamav sqlite-devel
   # build-essential libfcgi-dev libfcgi0ldbl libbz2-dev libjpeg-dev libfreetype6-dev libpq-dev libreadline-dev letsencrypt pkg-config
 elif [ -e /usr/sbin/pkg ]; then
   # FreeBSD / Solaris
