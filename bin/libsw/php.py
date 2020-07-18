@@ -462,7 +462,7 @@ def get_updated_versions(force_refresh=False):
         return vers
 
 def get_prerelease_version(version_array):
-    request = requests.get('https://downloads.php.net/~pollita/')
+    request = requests.get('https://downloads.php.net/~carusogabriel/')
     regex = re.compile(r'.*<a href="php-([0-9\.]*)([a-z]*)([0-9]+)\.tar\.bz2">.*')
     for line in request.text.splitlines():
         match = regex.match(line)
@@ -870,11 +870,11 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         source = 'https://www.php.net/distributions/php-' + full_version + '.tar.bz2'
         if settings.get_bool('enable_php_prerelease_version'):
             if '.a.' in full_version:
-                source = 'https://downloads.php.net/~pollita/php-' + full_version.replace('.a.', 'alpha') + '.tar.bz2'
+                source = 'https://downloads.php.net/~carusogabriel/php-' + full_version.replace('.a.', 'alpha') + '.tar.bz2'
             if '.b.' in full_version:
-                source = 'https://downloads.php.net/~pollita/php-' + full_version.replace('.b.', 'beta') + '.tar.bz2'
+                source = 'https://downloads.php.net/~carusogabriel/php-' + full_version.replace('.b.', 'beta') + '.tar.bz2'
             if '.R.' in full_version:
-                source = 'https://downloads.php.net/~pollita/php-' + full_version.replace('.R.', 'RC') + '.tar.bz2'
+                source = 'https://downloads.php.net/~carusogabriel/php-' + full_version.replace('.R.', 'RC') + '.tar.bz2'
         return source
 
     def dependencies(self):
