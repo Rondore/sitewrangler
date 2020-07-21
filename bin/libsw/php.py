@@ -14,7 +14,7 @@ import shutil
 import pwd
 import time
 from shutil import copyfile
-from libsw import logger, curl, file_filter, version, builder, settings, service, user, input_util
+from libsw import logger, curl, file_filter, version, builder, settings, service, user, input_util, pecl
 
 # enable_legacy_versions = settings.get_bool('enable_php_legacy_versions')
 php71version = '7.1.33' # 18 Dec 2019
@@ -842,6 +842,17 @@ class ImapBuilder(builder.AbstractGitBuilder):
     def dependencies(self):
         return ['openssl']
 
+def get_registered_pecl_builders():
+    """Get an array of all PECL builders enabled by the user."""
+    pecl_builders = []
+    from libsw import build_index
+    builder_list = build_index.enabled_slugs()
+    for possible_pecl in builder_list:
+        if possible_pecl[:5] == 'pecl-':
+            p_builder = build_index.get_builder(possible_pecl)
+            pecl_builders.append(p_builder)
+    return pecl_builders
+
 class PhpBuilder(builder.AbstractArchiveBuilder):
     """A class to build PHP from source."""
     def __init__(self, version_str):
@@ -878,7 +889,10 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         return source
 
     def dependencies(self):
-        return ['openssl', 'uw-imap', 'curl']
+        deps = ['openssl', 'uw-imap', 'curl']
+        for pecl_builder in get_registered_pecl_builders():
+            deps.append(pecl_builder.slug)
+        return deps
 
     # def get_config_arg_file(self):
     #     config_folder = settings.get('install_path') + 'etc/build-config/'
@@ -930,6 +944,8 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
     def populate_config_args(self, log, command=['./configure']):
         command.append('--prefix=/opt/php-' + self.versions['sub'])
         command.append('--with-mysql-sock=' + settings.get('mysql_socket'))
+        for pecl_builder in get_registered_pecl_builders():
+            command.append('--with-' + pecl_builder.get_pecl_slug())
         return super().populate_config_args(log, command)
 
     def source_dir(self):
@@ -966,6 +982,21 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         for folder in builder.find_old_build_elements('/usr/local/src/php-' + self.versions['sub'] + '.', '/'):
             shutil.rmtree(folder)
             log.log("Removed old source directory " + folder)
+
+    def run_pre_config(self, log):
+        rebuild_config = False
+        ext_dir = self.source_dir() + 'ext/'
+        for pecl_builder in get_registered_pecl_builders():
+            pecl_dir = pecl_builder.source_dir()
+            target_dir = ext_dir + pecl_builder.get_pecl_slug() + '/'
+            if os.path.exists(target_dir):
+                shutil.rmtree(target_dir)
+            shutil.copytree(pecl_dir, target_dir)
+            rebuild_config = True
+        if rebuild_config:
+            log.log('Rebuilding PHP configure file to include PECL libraries')
+            os.remove(self.source_dir() + 'configure')
+            log.run([self.source_dir() + 'buildconf', '--force'])
 
 def install_wp_cli():
     """Install or reinstall the WordPress CLI."""

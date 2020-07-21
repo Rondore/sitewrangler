@@ -454,6 +454,9 @@ class AbstractArchiveBuilder(AbstractBuilder):
         elif source [-8:] == '.tar.bz2':
             ext = '.tar.bz2'
             type = 'r:bz2'
+        elif source [-4:] == '.tgz':
+            ext = '.tgz'
+            type = 'r:gz'
         tarname = self.build_dir + self.slug + '-' + self.source_version + ext
         if not os.path.exists(self.build_dir):
             os.mkdir(self.build_dir)
@@ -502,6 +505,24 @@ class AbstractGitBuilder(AbstractBuilder):
     def get_clone_args(self):
         return []
 
+    def git_init(self, log=False):
+        """
+        Initialize the local copy of the git repository.
+
+        Args:
+            log (optional) - a Logger object to run commands through
+        """
+        old_pwd = os.getcwd()
+        os.chdir(self.build_dir)
+        run_command = ['git', 'clone', self.get_source_url()]
+        run_command.extend(self.get_clone_args())
+        run_command.extend(['--branch', self.branch])
+        if log == False:
+            subprocess.run(run_command)
+        else:
+            log.run(run_command)
+        os.chdir(old_pwd)
+
     def fetch_source(self, source, log):
         old_pwd = os.getcwd()
         target_dir = self.source_dir()
@@ -510,12 +531,7 @@ class AbstractGitBuilder(AbstractBuilder):
             self.clean(log)
             log.run(['git', 'pull', 'origin', self.branch])
         else:
-            os.chdir(self.build_dir)
-            run_command = ['git', 'clone', self.get_source_url()]
-            run_command.extend(self.get_clone_args())
-            run_command.extend(['--branch', self.branch])
-            log.run(run_command)
-            #os.chdir(target_dir)
+            self.git_init(log)
         os.chdir(old_pwd)
 
     # def fetch_source(self, source, log):

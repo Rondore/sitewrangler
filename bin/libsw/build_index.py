@@ -35,7 +35,7 @@ import glob
 import os
 import inquirer
 import subprocess
-from libsw import curl, nginx, openssl, php, postgresql, file_filter, input_util
+from libsw import file_filter, input_util
 
 
 def registered_slugs():
