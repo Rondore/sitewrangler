@@ -393,6 +393,8 @@ def change_version(domain, old_version, new_version):
         old_version - The current PHP version
         new_version - The PHP version to change the site to
     """
+    if not os.path.exists('/opt/php-' + new_version + '/etc/php-fpm.d/'):
+        os.makedirs('/opt/php-' + new_version + '/etc/php-fpm.d/')
     os.rename('/opt/php-' + old_version + '/etc/php-fpm.d/' + domain + '.conf', '/opt/php-' + new_version + '/etc/php-fpm.d/' + domain + '.conf')
     username = user_from_domain(domain)
     set_sys_user_version(username, new_version)
