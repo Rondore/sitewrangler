@@ -492,19 +492,6 @@ class AddPid(file_filter.FileFilter):
             out_stream.write('pid = run/php-fpm.pid\n')
         return add_line
 
-class AddMemcacheIni(file_filter.FileFilter):
-    """Append a line for Memcache in a php.ini file."""
-    def filter_stream(self, in_stream, out_stream):
-        search = re.compile(r'^zend_extension=opcache\.so$')
-        add_line = True
-        for line in in_stream:
-            if search.match(line):
-                add_line = False
-            out_stream.write(line)
-        if add_line:
-            out_stream.write('zend_extension=opcache.so')
-        return add_line
-
 def deploy_environment(versions, log):
     """
     Install a PHP systemd init file if needed, then start the appropriate PHP
@@ -527,8 +514,6 @@ def deploy_environment(versions, log):
     if not bin_link_exists:
         os.symlink('/opt/php-' + versions['sub'] + '/bin/php', bin_path)
     copyfile(src_dir + 'php.ini-production', '/opt/php-' + versions['sub'] + '/lib/php.ini')
-    #file_filter.filter_file('/opt/php-' + versions['sub'] + '/lib/php.ini', filter_add_memcache_ini)
-    AddMemcacheIni('/opt/php-' + versions['sub'] + '/lib/php.ini').run()
 
     fpm_conf_name = '/opt/php-' + versions['sub'] + '/etc/php-fpm.conf'
     copyfile(fpm_conf_name + '.default', fpm_conf_name)
@@ -593,53 +578,6 @@ def remove_environment(subversion):
     sourcepath = '/usr/local/src/php-' + fullversion + '/'
     if os.path.exists(sourcepath):
         shutil.rmtree(sourcepath)
-
-def fetch_memcache_source(version, build_dir):
-    """
-    Fetch the source code for memcached.
-
-    Args:
-        version - The PHP version to build memcached against
-        build_dir - The directory to save the memcached source files
-    """
-    tarname = build_dir + 'php' + version + '.zip'
-    wget.download('https://github.com/php-memcached-dev/php-memcached/archive/php' + version + '.zip', tarname)
-    import zipfile
-    with zipfile.ZipFile(tarname,'r') as zip:
-        zip.extractall(build_dir)
-    os.remove(tarname)
-    return build_dir + 'php-memcached-php' + version
-
-def build_memcache(versions, log):
-    """
-    Fetch the source code for memcached and compile it.
-
-    Args:
-        versions - The versions array for the PHP version to build memcached
-            against
-        log - An open log to write to
-    """
-    build_path = '/usr/local/src/php-' + versions['full'] + '/'
-    if not os.path.exists(build_path):
-        os.mkdir(build_path)
-    build_path = build_path + 'php-memcache/'
-    if not os.path.exists(build_path):
-        os.mkdir(build_path)
-    source_dir = fetch_memcache_source(versions['major'], build_path)
-    old_pwd = os.getcwd()
-    os.chdir(source_dir)
-
-    lib_path = subprocess.getoutput("whereis libmemcached | cut -d ':' -f2 | cut -d ' ' -f2") + '/'
-    log.run(['/opt/php-' + versions['sub'] + '/bin/phpize'])
-    log.run(['./configure', '--with-php-config=/opt/php-' + versions['sub'] + '/bin/php-config', '--with-libmemcached-dir=' + lib_path])
-    make_ret_val = log.run(['make', '-l', settings.get('max_build_load')])
-    if make_ret_val != 0:
-        log.log('memcache make command failed. Skipping memcache.')
-    else:
-        log.run(['make', 'install'])
-        if not settings.get_bool('build_server'):
-            log.run(['make', '-l', settings.get('max_build_load'), 'clean'])
-    os.chdir(old_pwd)
 
 def detect_distro_code():
     """
@@ -928,8 +866,6 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
 
     def install(self, log):
         super().install(log)
-        if self.versions['major'] == '7':
-            build_memcache(self.versions, log)
         deploy_environment(self.versions, log)
 
     def build(self):
@@ -947,7 +883,7 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         command.append('--prefix=/opt/php-' + self.versions['sub'])
         command.append('--with-mysql-sock=' + settings.get('mysql_socket'))
         for pecl_builder in get_registered_pecl_builders():
-            command.append('--with-' + pecl_builder.get_pecl_slug())
+            command.append(pecl_builder.get_php_build_arg())
         return super().populate_config_args(log, command)
 
     def source_dir(self):

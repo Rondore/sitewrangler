@@ -8,3 +8,6 @@ class ImagickBuilder(pecl.PeclBuilder):
 
     def dependencies(self):
         return ['image-magic']
+
+    def get_php_build_arg(self):
+        return '--with-imagick'

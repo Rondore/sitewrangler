@@ -20,6 +20,12 @@ class PeclBuilder(builder.AbstractArchiveBuilder):
         """
         pass
 
+    def get_php_build_arg(self):
+        """
+        Get the argument to pass to PHP's configure command to include this PECL package in the build.
+        """
+        return '--enable-' + self.get_pecl_slug()
+
     def get_source_url(self):
         return 'https://pecl.php.net/get/' + self.get_pecl_slug() + '-' + self.get_updated_version() + '.tgz'
 
