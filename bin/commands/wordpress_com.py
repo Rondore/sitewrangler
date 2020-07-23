@@ -9,7 +9,7 @@ def _help():
     print('sw wp clone  # Clone an existing WordpPress site to a new user and domain')
     print('sw wp login [example.com]  # Create a one-time use login link')
     print('sw wp cron [example.com]  # Create a real cron job for a WordPress site and disable the fake cron')
-    print('sw wp listupdate [example.com]  # Create a real cron job for a WordPress site and disable the fake cron')
+    print('sw wp listupdate [example.com]  # List needed updates to WordPress core, plugin, and theme files')
 index = command_index.CategoryIndex('wp', _help)
 
 def _list(domain):
