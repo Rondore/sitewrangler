@@ -173,6 +173,17 @@ def populate_dependant_builders(build_queue):
     build_queue.optimize()
     return success
 
+def get_dependant_upon(slug):
+    """
+    Get software that depends upon the given software slug.
+    """
+    dependant_slugs = [];
+    for dex in Index.index:
+        if slug in dex.dependencies():
+            dependant_slugs.append(dex.slug)
+            dependant_slugs.extend(get_dependant_upon(dex.slug))
+    return dependant_slugs
+
 def get_installed(excluded_array=[]):
     """
     Get an array of installed software packages.

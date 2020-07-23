@@ -6,12 +6,12 @@ import requests
 from abc import abstractmethod
 from libsw import builder
 
-up_to_date_version = False
-
 class PeclBuilder(builder.AbstractArchiveBuilder):
+
     def __init__(self, build_dir="/usr/local/src/pecl/"):
         slug = self.get_pecl_slug()
         super().__init__('pecl-' + slug, build_dir)
+        self.up_to_date_version = False
 
     @abstractmethod
     def get_pecl_slug(self):
@@ -46,9 +46,8 @@ class PeclBuilder(builder.AbstractArchiveBuilder):
         return current_version
 
     def get_updated_version(self):
-        global up_to_date_version
-        if up_to_date_version != False :
-            return up_to_date_version
+        if self.up_to_date_version != False :
+            return self.up_to_date_version
         url = 'https://pecl.php.net/get/' + self.get_pecl_slug()
         response = requests.head(url)
         field_data = response.headers['Content-Disposition']
@@ -60,7 +59,7 @@ class PeclBuilder(builder.AbstractArchiveBuilder):
                 version = re.match(r'.*-([0-9\.]+)', filename).group(1)
                 if( version[-1:] == '.' ):
                     version = version[:-1]
-                up_to_date_version = version
+                self.up_to_date_version = version
                 if self.source_version == False:
                     self.source_version = version
                 return version

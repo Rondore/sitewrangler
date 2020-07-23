@@ -147,7 +147,7 @@ index.register_command('installprebuilt', _install_prebuilt)
 index.register_command('install-prebuilt', _install_prebuilt)
 
 def _install(slug, more):
-    from libsw import build_index, build_queue
+    from libsw import build_index, build_queue, file_filter
     slug_list = []
     if slug != False:
         slug = slug.lower()
@@ -180,6 +180,13 @@ def _install(slug, more):
         build_index.populate_slug_list(queue, slug_list)
         build_index.populate_dependant_builders(queue)
         queue.run()
+        needs_rebuild = []
+        for entry in slug_list:
+            needs_rebuild.extend(build_index.get_dependant_upon(entry))
+        if len(needs_rebuild) > 0:
+            for rebuild in needs_rebuild:
+                file_filter.AppendUnique(build_queue.default_failed_file, rebuild).run()
+            print('Some packages must now be rebuilt. Run "sw build update" to build them.')
 index.register_command('install', _install)
 
 def _disable(slug, more):
