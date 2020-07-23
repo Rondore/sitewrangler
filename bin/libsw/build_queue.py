@@ -5,7 +5,7 @@ import os
 from libsw import settings, builder
 
 default_failed_file = settings.get('install_path') + 'etc/build-failures'
-debug = True
+debug = settings.get('debug_build_queue')
 
 class BuildQueue():
     """
@@ -267,8 +267,7 @@ class BuildQueue():
             builder, status = self.queue[i]
             status = ''
             if self.in_failed_state(builder.slug):
-                if debug:
-                    print('Marking ' + builder.slug + ' for build due to previous failure.')
+                print('Marking ' + builder.slug + ' for build due to previous action.')
                 status = 'waiting'
             self.queue[i] = builder, status
 
@@ -280,6 +279,13 @@ class BuildQueue():
             builder - The builder to check
             level - The recursive depth level the status check is in
         """
+        dmsg = 'Checking '
+        for i in range(level):
+            dmsg += ' '
+        dmsg += builder.slug + ': '
+        if debug or level == 0:
+            print(dmsg, end='', flush=True)
+
         status = 'missing'
         for b, s in self.queue:
             if b is builder:
@@ -305,12 +311,8 @@ class BuildQueue():
                         if status != 'waiting':
                             status = 'ready'
 
-        if debug:
-            dmsg = 'Checking:'
-            for i in range(level):
-                dmsg += ' '
-            dmsg += builder.slug + ' ' + status
-            print(dmsg)
+        if debug or level == 0:
+            print(status, flush=True)
         return status
 
 class RebuildQueue(BuildQueue):

@@ -165,6 +165,7 @@ def _get_default_settings():
         'mysql_socket': '/var/run/mysqld/mysqld.sock',
         'build_server': False,
         'enable_php_prerelease_version': False,
+        'debug_build_queue': False,
 
         'compact_help': False
     }
