@@ -457,7 +457,7 @@ def get_updated_versions(force_refresh=False):
             vers.append(php40version)
             vers.append(php30version)
         if settings.get_bool('enable_php_prerelease_version'):
-            vers = get_prerelease_version(vers)
+            vers.extend(get_prerelease_version(vers))
         with open(cache_file, 'w+') as cache_write:
             for v in vers:
                 cache_write.write(v + "\n")
@@ -466,6 +466,7 @@ def get_updated_versions(force_refresh=False):
 def get_prerelease_version(version_array):
     request = requests.get('https://downloads.php.net/~carusogabriel/')
     regex = re.compile(r'.*<a href="php-([0-9\.]*)([a-z]*)([0-9]+)\.tar\.bz2">.*')
+    latest = False
     for line in request.text.splitlines():
         match = regex.match(line)
         if match == None:
@@ -474,7 +475,11 @@ def get_prerelease_version(version_array):
         letter = match.group(2)[0]
         release_number = match.group(3)
         if len(main_version) > 0:
-            version_array.append(main_version + '.' + letter + '.' + release_number)
+            combined = main_version + '.' + letter + '.' + release_number
+            if not latest or version.first_is_higher(combined, latest):
+                latest = combined
+    if latest:
+        version_array.append(latest)
     return version_array
 
 
