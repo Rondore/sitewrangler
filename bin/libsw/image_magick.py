@@ -3,9 +3,9 @@
 import os, subprocess
 from libsw import builder, version
 
-class ImageMagicBuilder(builder.AbstractGitBuilder):
+class ImageMagickBuilder(builder.AbstractGitBuilder):
     def __init__(self, build_dir="/usr/local/src/", source_version=False):
-        super().__init__('image-magic', build_dir, source_version)
+        super().__init__('image-magick', build_dir, source_version)
 
     def get_source_url(self):
         return 'https://github.com/ImageMagick/ImageMagick.git'
