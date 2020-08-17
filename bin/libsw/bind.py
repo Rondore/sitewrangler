@@ -333,7 +333,7 @@ def check_expiration(email_admin=False):
     output = ''
     warning_count = 0
     for dom in domains:
-        expire = subprocess.getoutput("whois " + dom + " | grep '[Ee]xpir' | grep '[0-9]T[0-9]' | sed 's/.*: //'")
+        expire = subprocess.getoutput("whois " + dom + " | grep '[Ee]xpir' | grep '[0-9]T[0-9]' | sed 's/.*: //' | head -1")
         if len(expire) > 0:
             #print(dom + ': ' + expire)
             expire = dateutil.parser.parse(expire)
