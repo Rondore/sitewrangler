@@ -87,7 +87,7 @@ chmod +x /etc/cron.d/certbot
 
 #setup wp-cli
 mkdir -p /opt/wp-cli/
-curl https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar > /opt/wp-cli/wp-cli.phar
+wget https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -O /opt/wp-cli/wp-cli.phar
 chmod +x /opt/wp-cli/wp-cli.phar
 test -e /usr/local/bin || mkdir -p /usr/local/bin
 test -e /usr/local/bin/wp || ln -s /opt/wp-cli/wp-cli.phar /usr/local/bin/wp
