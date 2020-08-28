@@ -171,8 +171,12 @@ def send_admin_message(subject, message_content):
     message["From"] = system_from_addr()
     message["To"] = settings.get('system_admin_email')
     message["Subject"] = subject
-    process = subprocess.Popen(["/usr/sbin/sendmail", "-t", "-oi"], stdin=subprocess.PIPE)
-    process.communicate( message.as_string().encode() )
+    if os.path.exists('usr/sbin/sendmail'):
+        process = subprocess.Popen(["/usr/sbin/sendmail", "-t", "-oi"], stdin=subprocess.PIPE)
+        process.communicate( message.as_string().encode() )
+        return True
+    else:
+        return False
 
 def send_admin_logfile(subject, log_name):
     """
