@@ -61,7 +61,7 @@ def _edit(domain):
     from libsw import php
     if domain == False:
         domain = php.select_conf('Select website to edit.')
-    php.edit_vhost(domain)
+    php.edit_vhost(domain['file'])
 index.register_command('edit', _edit)
 
 def _list(disabled):
