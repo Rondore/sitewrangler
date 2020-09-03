@@ -166,7 +166,10 @@ def unblock_ip(ip_address):
     LiftCsfRules(csf_rules).run()
 
 def writepignore():
-    from libsw import php, version
+    from libsw import php, version, os
+    if not os.path.exists('/etc/csf/'):
+        # CSF is not installed, skip
+        return False
     ignore = "# Do not edit this section\n"
     ignore += """exe:/bin/bash
 exe:/lib/systemd/systemd
