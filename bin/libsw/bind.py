@@ -340,11 +340,11 @@ def check_expiration(email_admin=False):
             delta = expire - now
             delta = delta.total_seconds()
             if delta < 0:
-                output += dom + ' is expired!'
+                output += dom + ' is expired!\n'
             elif delta < 604800: # 604800 = one week in seconds
-                output += dom + ' will expire within one week! (' + str(expire) + ')'
+                output += dom + ' will expire within one week! (' + str(expire) + ')\n'
             elif delta < 1209600: # 1209600 = two weeks in seconds
-                output += dom + ' will expire within two weeks! (' + str(expire) + ')'
+                output += dom + ' will expire within two weeks! (' + str(expire) + ')\n'
 
     if len(output) > 0:
         if email_admin:
