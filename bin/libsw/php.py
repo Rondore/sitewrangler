@@ -512,8 +512,8 @@ def deploy_environment(versions, log):
         src_dir = src_dir.replace('.a.', 'alpha')
     if '.b.' in src_dir:
         src_dir = src_dir.replace('.b.', 'beta')
-    if '.R.' in src_dir:
-        src_dir = src_dir.replace('.R.', 'RC')
+    if '.r.' in src_dir:
+        src_dir = src_dir.replace('.r.', 'rc')
     src_dir = '/usr/local/src/php-' + src_dir + '/'
     bin_link_exists = os.path.islink(bin_path) or os.path.isfile(bin_path)
     if not bin_link_exists:
@@ -829,8 +829,8 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
                 source = 'https://downloads.php.net/~carusogabriel/php-' + full_version.replace('.a.', 'alpha') + '.tar.bz2'
             if '.b.' in full_version:
                 source = 'https://downloads.php.net/~carusogabriel/php-' + full_version.replace('.b.', 'beta') + '.tar.bz2'
-            if '.R.' in full_version:
-                source = 'https://downloads.php.net/~carusogabriel/php-' + full_version.replace('.R.', 'RC') + '.tar.bz2'
+            if '.r.' in full_version:
+                source = 'https://downloads.php.net/~carusogabriel/php-' + full_version.replace('.r.', 'rc') + '.tar.bz2'
         return source
 
     def dependencies(self):
@@ -898,8 +898,8 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
                 full_version = full_version.replace('.a.', 'alpha')
             if '.b.' in full_version:
                 full_version = full_version.replace('.b.', 'beta')
-            if '.R.' in full_version:
-                full_version = full_version.replace('.R.', 'RC')
+            if '.r.' in full_version:
+                full_version = full_version.replace('.r.', 'rc')
         return self.build_dir + 'php-' + full_version + '/'
 
     def log_name(self):
