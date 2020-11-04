@@ -63,7 +63,7 @@ def get_versions(excluded_array=[]):
     """
     from libsw import build_index
     save_file = settings.get('install_path') + 'etc/enabled-packages'
-    slugs = file_filter.get_trimmed_lower_file_as_array(save_file)
+    slugs = file_filter.get_trimmed_file_as_array(save_file)
     versions = []
     if slugs != False:
         for slug in slugs:
@@ -428,7 +428,7 @@ def get_updated_versions(force_refresh=False):
         use_cache = False
 
     if use_cache:
-        return file_filter.get_trimmed_lower_file_as_array(cache_file)
+        return file_filter.get_trimmed_file_as_array(cache_file)
     else:
         request = requests.get('https://www.php.net/downloads.php')
         regex = re.compile(r'.*/distributions/php-([0-9\.]*)\.tar\.bz2.*')
@@ -465,7 +465,7 @@ def get_updated_versions(force_refresh=False):
 
 def get_prerelease_version(version_array):
     request = requests.get('https://downloads.php.net/~carusogabriel/')
-    regex = re.compile(r'.*<a href="php-([0-9\.]*)([a-z]*)([0-9]+)\.tar\.bz2">.*')
+    regex = re.compile(r'.*<a href="php-([0-9\.]*)([a-zA-Z]*)([0-9]+)\.tar\.bz2">.*')
     latest = False
     for line in request.text.splitlines():
         match = regex.match(line)
@@ -476,7 +476,7 @@ def get_prerelease_version(version_array):
         release_number = match.group(3)
         if len(main_version) > 0:
             combined = main_version + '.' + letter + '.' + release_number
-            if not latest or version.first_is_higher(combined, latest):
+            if not latest or version.first_is_higher(combined.lower(), latest.lower()):
                 latest = combined
     if latest:
         version_array.append(latest)
@@ -514,6 +514,8 @@ def deploy_environment(versions, log):
         src_dir = src_dir.replace('.b.', 'beta')
     if '.r.' in src_dir:
         src_dir = src_dir.replace('.r.', 'rc')
+    if '.R.' in src_dir:
+        src_dir = src_dir.replace('.R.', 'RC')
     src_dir = '/usr/local/src/php-' + src_dir + '/'
     bin_link_exists = os.path.islink(bin_path) or os.path.isfile(bin_path)
     if not bin_link_exists:
@@ -831,6 +833,8 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
                 source = 'https://downloads.php.net/~carusogabriel/php-' + full_version.replace('.b.', 'beta') + '.tar.bz2'
             if '.r.' in full_version:
                 source = 'https://downloads.php.net/~carusogabriel/php-' + full_version.replace('.r.', 'rc') + '.tar.bz2'
+            if '.R.' in full_version:
+                source = 'https://downloads.php.net/~carusogabriel/php-' + full_version.replace('.R.', 'RC') + '.tar.bz2'
         return source
 
     def dependencies(self):
@@ -900,6 +904,8 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
                 full_version = full_version.replace('.b.', 'beta')
             if '.r.' in full_version:
                 full_version = full_version.replace('.r.', 'rc')
+            if '.R.' in full_version:
+                full_version = full_version.replace('.R.', 'RC')
         return self.build_dir + 'php-' + full_version + '/'
 
     def log_name(self):
