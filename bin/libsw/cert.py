@@ -253,11 +253,11 @@ def remove_exim_domain(domain):
     for sub in get_mail_domain_list(domain):
         cert = target_cert_dir + '/' + sub + '.pem'
         if os.path.exists(cert):
-            os.path.remove(cert)
+            os.remove(cert)
             deleted = True
         key = target_key_dir + '/' + sub + '.pem'
         if os.path.exists(key):
-            os.path.remove(key)
+            os.remove(key)
             deleted = True
     return deleted
 
