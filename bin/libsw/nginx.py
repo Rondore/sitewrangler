@@ -438,7 +438,7 @@ http {
     scgi_temp_path "/usr/local/nginx/scgi_temp" 1 2;
     uwsgi_temp_path "/usr/local/nginx/uwsgi_temp" 1 2;
 
-    access_log  "/usr/local/nginx/access.log";
+    access_log  "/usr/local/nginx/logs/access.log";
 
     modsecurity on;
     modsecurity_rules_file "/opt/sitewrangler/etc/modsec/rules.conf";
