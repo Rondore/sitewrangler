@@ -109,8 +109,9 @@ def _change(domain, more):
             if entry['file'].lower() == domain:
                 file_entry = entry
                 break
-        print('Unable to locate ' + domain)
     if file_entry == False:
+        if domain != False:
+            print('Unable to locate ' + domain)
         file_entry = php.select_conf("Select PHP site to change")
     old_version = file_entry['version']
     domain = file_entry['file']
