@@ -136,6 +136,8 @@ def deploy_file(source_file, target_file, uid=False, gid=False):
     Return:
         True if the file is copied. False if it is not.
     """
+    if not os.path.exists(source_file):
+        return False
     if ( not os.path.exists(target_file) or
             os.path.getmtime(source_file) > os.path.getmtime(target_file) ):
         target_dir = os.path.dirname(target_file)
