@@ -888,7 +888,9 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         return super().deploy(remote_address, log)
 
 
-    def populate_config_args(self, log, command=['./configure']):
+    def populate_config_args(self, log, command=False):
+        if command == False:
+            command = ['./configure'];
         command.append('--prefix=/opt/php-' + self.versions['sub'])
         command.append('--with-mysql-sock=' + settings.get('mysql_socket'))
         for pecl_builder in get_registered_pecl_builders():
