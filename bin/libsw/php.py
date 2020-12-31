@@ -547,7 +547,7 @@ def deploy_environment(versions, log):
             unit_file.write('Type=simple\n')
             unit_file.write('PIDFile=/opt/php-' + versions['sub'] + '/var/run/php-fpm.pid\n')
             unit_file.write('ExecStart=/opt/php-' + versions['sub'] + '/sbin/php-fpm --nodaemonize --fpm-config /opt/php-' + versions['sub'] + '/etc/php-fpm.conf\n')
-            unit_file.write('ExecReload=/bin/kill -USR2 \$MAINPID\n')
+            unit_file.write('ExecReload=/bin/kill -USR2 $MAINPID\n')
             unit_file.write('Restart=always')
             unit_file.write('RestartSec=3')
             unit_file.write('\n')
