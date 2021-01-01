@@ -157,7 +157,7 @@ class AbstractBuilder(ABC):
         """
         return settings.get('install_path') + 'etc/build-config/user/' + self.slug
 
-    def populate_config_args(self, log, command=['./configure']):
+    def populate_config_args(self, log, command=False):
         """
         Populates a configure command with it's proper arguments from the
         matching configuration file.
@@ -165,6 +165,8 @@ class AbstractBuilder(ABC):
         Args:
             command - A default configure command array
         """
+        if command == False:
+            command=['./configure']
         command = self.populate_hard_config_args(log, command)
         command = self.populate_user_config_args(log, command)
         return command

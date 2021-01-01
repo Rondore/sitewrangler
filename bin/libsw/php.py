@@ -54,7 +54,7 @@ def get_installed_version(sub_version):
     """
     return subprocess.getoutput("/opt/php-" + sub_version + "/bin/php -v 2>/dev/null | grep '^PHP " + sub_version + "' | awk '{print $2}'")
 
-def get_versions(excluded_array=[]):
+def get_versions(excluded_array=False):
     """
     Get an array of installed PHP versions.
 
@@ -62,6 +62,8 @@ def get_versions(excluded_array=[]):
         excluded_array - (optional) An array of PHP versions to exclude from the array
     """
     from libsw import build_index
+    if excluded_array == False:
+        excluded_array=[]
     save_file = settings.get('install_path') + 'etc/enabled-packages'
     slugs = file_filter.get_trimmed_file_as_array(save_file)
     versions = []
@@ -72,7 +74,7 @@ def get_versions(excluded_array=[]):
                 versions.append(ver)
     return versions
 
-def select_version(excluded_array=[]):
+def select_version(excluded_array=False):
     """
     Have the user select a PHP subversion, optionally excluding certain
     subversions.
@@ -80,6 +82,8 @@ def select_version(excluded_array=[]):
     Args:
         excluded_array - (optional) A list of PHP subversions to exclude
     """
+    if excluded_array == False:
+        excluded_array=[]
     versions = get_versions(excluded_array)
     questions = [
         inquirer.List('ver',

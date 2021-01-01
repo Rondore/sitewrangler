@@ -184,13 +184,15 @@ def get_dependant_upon(slug):
             dependant_slugs.extend(get_dependant_upon(dex.slug))
     return dependant_slugs
 
-def get_installed(excluded_array=[]):
+def get_installed(excluded_array=False):
     """
     Get an array of installed software packages.
 
     Args:
         excluded_array - (optional) An array of software slugs to exclude from the array
     """
+    if excluded_array == False:
+        excluded_array=[]
     versions = []
     save_file = _get_enabled_slugs_file()
     if os.path.exists(save_file):
