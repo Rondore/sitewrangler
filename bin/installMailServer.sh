@@ -597,10 +597,10 @@ fi
 
 #echo 'Stage 6D'
 
-if [ -z "$(grep '^CHECK_RCPT_IP_DNSBLS =' "$macrofile")" ]; then
-  echo "CHECK_RCPT_IP_DNSBLS = zen.spamhaus.org" >> $macrofile
+if [ -z "$(grep '^CHECK_RCPT_DOMAIN_DNSBLS =' "$macrofile")" ]; then
+  echo "CHECK_RCPT_DOMAIN_DNSBLS = dbl.spamhaus.org/$sender_address_domain" >> $macrofile
 else
-  sed -Ei "s/^CHECK_RCPT_IP_DNSBLS =.*\$/CHECK_RCPT_IP_DNSBLS = zen.spamhaus.org/" $macrofile
+  sed -Ei "s/^CHECK_RCPT_DOMAIN_DNSBLS =.*\$/CHECK_RCPT_DOMAIN_DNSBLS = dbl.spamhaus.org\/\$sender_address_domain/" $macrofile
 fi
 
 #echo 'Stage 6E'
