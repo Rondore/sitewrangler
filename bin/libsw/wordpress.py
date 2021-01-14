@@ -5,6 +5,8 @@ import time
 import subprocess
 import random
 import inquirer
+import stat
+import wget
 from libsw import php, nginx, user, bind, cert, db, settings, input_util
 from getpass import getpass
 from mysql import connector
@@ -390,3 +392,17 @@ def get_site_home(sys_user, docroot):
     if home[-1] != '/':
         home += '/'
     return home
+
+def install_wp_cli():
+    install_directory = '/opt/wp-cli/'
+    download_url = 'https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar'
+    save_file = install_directory + 'wp-cli.phar'
+    bin_path = '/usr/local/bin/wp'
+    if not os.path.exists(install_directory):
+        os.makedirs(install_directory)
+    wget.download(download_url, save_file)
+    old_mode = os.stat(save_file)
+    os.chmod(save_file, old_mode.st_mode | stat.S_IEXEC)
+    if not os.path.exists(bin_path):
+        os.makedirs('/usr/local/bin')
+        os.symlink(save_file, bin_path)

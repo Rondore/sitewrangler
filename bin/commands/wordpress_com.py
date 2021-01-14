@@ -127,3 +127,13 @@ def _cron(domain):
     sys_user = nginx.user_from_domain(domain)
     wordpress.add_cron(sys_user)
 index.register_command('cron', _cron)
+
+def _installcli():
+    from libsw import wordpress
+    wordpress.install_wp_cli()
+    print()
+    print('Up-to-date Wordpress CLI Installed')
+index.register_command('install-cli', _installcli)
+index.register_command('installcli', _installcli)
+index.register_command('update-cli', _installcli)
+index.register_command('updatecli', _installcli)
