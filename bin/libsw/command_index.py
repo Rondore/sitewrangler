@@ -179,7 +179,7 @@ class CategoryIndex(Index):
         """
         return super().register_command(self.category, command, function, rootonly)
 
-# Since the builders we are importing import this file,
+# Since the commands we are importing import this file,
 # this import line needs to be after the declaration
 # for Index()
 from commands import *
