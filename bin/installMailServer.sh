@@ -4,6 +4,10 @@ if [ ! -e /usr/local/bin/sw ]; then
   ln -s /opt/sitewrangler/bin/sitewrangler.py /usr/local/bin/sw
 fi
 
+if [ ! -e /etc/bash_completion.d/sw ]; then
+  echo "complete -C 'sw complete' sw" > /etc/bash_completion.d/sw
+fi
+
 #TODO allow user to set FQDN for mail server hostname
 mail_hostname=$(hostname)
 #TODO allow user to select main domain to use for non-SNI connections

@@ -19,7 +19,7 @@ class Index():
     index = []
     help_index = []
 
-    def register_command(self, category, command, function, rootonly=True):
+    def register_command(self, category, command, function, rootonly=True, autocomplete=False):
         """
         Register a new CLI command.
 
@@ -36,7 +36,7 @@ class Index():
         for i in Index.index:
             if category == i[0] and category == i[1]:
                 return False
-        Index.index.append([category, command, function, rootonly])
+        Index.index.append([category, command, function, rootonly, autocomplete])
         return True
 
     def register_help(self, category, help_function):
@@ -69,6 +69,9 @@ class Index():
         if command == False:
             self.run_help(category)
             return False
+        if category == 'complete':
+            self.autocomplete()
+            return True
         category = category.strip().lower()
         command = command.strip().lower()
         for com in Index.index:
@@ -92,6 +95,72 @@ class Index():
         self.run_help(category)
         return False
 
+    def autocomplete(self):
+        import shlex
+        point = int(os.getenv('COMP_POINT'))
+        line = os.getenv('COMP_LINE')
+        line = line[:point]
+        end_with_space = line[-1:] == ' ' and line[-2:] != '\\ '
+        args = shlex.split(line)[1:]
+        arg_count = len(args)
+        if arg_count == 0:
+            self.autocomplete_category('')
+            return
+        if arg_count == 1 and not end_with_space:
+            self.autocomplete_category(args[0])
+            return
+        if arg_count == 1:
+            self.autocomplete_command(args[0], '')
+            return
+        if arg_count == 2 and not end_with_space:
+            self.autocomplete_command(args[0], args[1])
+            return
+        if arg_count == 2:
+            self.autocomplete_args(args[0], args[1], [''], end_with_space)
+            return
+        self.autocomplete_args(args[0], args[1], args[2:], end_with_space)
+
+    def autocomplete_category(self, category):
+        category = category.lower()
+        length = len(category)
+        possible_categories = []
+        if category == 'help'[:length]:
+            possible_categories.append('help')
+        for com in Index.index:
+            test_category = com[0]
+            if test_category[:length] == category:
+                if test_category not in possible_categories:
+                    possible_categories.append(test_category)
+        for possible in possible_categories:
+            print(possible + '\n')
+
+    def autocomplete_command(self, category, command):
+        category = category.lower()
+        command = command.lower()
+        length = len(command)
+        possible_commands = []
+        if category == 'help':
+            self.autocomplete_category(command)
+        for com in Index.index:
+            test_category = com[0]
+            test_command = com[1]
+            if test_category == category:
+                if test_command[:length] == command:
+                    if test_category not in possible_commands:
+                        possible_commands.append(test_command)
+        for possible in possible_commands:
+            print(possible + '\n')
+
+    def autocomplete_args(self, category, command, arg_array, end_with_space):
+        category = category.lower()
+        command = command.lower()
+        for com in Index.index:
+            test_category = com[0]
+            test_command = com[1]
+            if test_category == category:
+                if test_command == command:
+                    if com[4] != False:
+                        com[4](arg_array, end_with_space)
 
     def run_help(self, category):
         """
@@ -166,7 +235,7 @@ class CategoryIndex(Index):
         self.category = category
         self.register_help(category, help_text)
 
-    def register_command(self, command, function, rootonly=True):
+    def register_command(self, command, function, rootonly=True, autocomplete=False):
         """
         Register a new command in the already set category.
 
@@ -177,7 +246,7 @@ class CategoryIndex(Index):
                 stand-alone argument and all subsequent arguments are passed as
                 an array.
         """
-        return super().register_command(self.category, command, function, rootonly)
+        return super().register_command(self.category, command, function, rootonly, autocomplete)
 
 # Since the commands we are importing import this file,
 # this import line needs to be after the declaration

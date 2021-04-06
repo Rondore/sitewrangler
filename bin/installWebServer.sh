@@ -4,6 +4,10 @@ if [ ! -e /usr/local/bin/sw ]; then
   ln -s /opt/sitewrangler/bin/sitewrangler.py /usr/local/bin/sw
 fi
 
+if [ ! -e /etc/bash_completion.d/sw ]; then
+  echo "complete -C 'sw complete' sw" > /etc/bash_completion.d/sw
+fi
+
 pip="pip3"
 if [ -e /usr/bin/apt-get ]; then
   # Debian/Ubuntu
