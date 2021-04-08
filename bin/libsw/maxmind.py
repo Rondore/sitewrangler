@@ -6,7 +6,7 @@ from libsw import builder
 class MaxMindBuilder(builder.AbstractGitBuilder):
     """A class to build ModSecurity from source."""
     def __init__(self):
-        super().__init__('maxmind', branch='master')
+        super().__init__('maxmind', branch='main')
 
     def get_source_url(self):
         return 'https://github.com/maxmind/libmaxminddb.git'
