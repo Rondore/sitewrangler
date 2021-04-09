@@ -21,11 +21,11 @@ sed -Ei 's/^([ \s]*)TCP6_IN[ \s]*=.*/\1TCP6_IN = "25,53,80,443,465,993"/' /etc/c
 sed -Ei 's/^([ \s]*)TCP_OUT[ \s]*=.*/\1TCP_OUT = "1:65535"/' /etc/csf/csf.conf
 sed -Ei 's/^([ \s]*)TCP6_OUT[ \s]*=.*/\1TCP6_OUT = "1:65535"/' /etc/csf/csf.conf
 
-sed -Ei 's/^([ \s]*)UDP_IN[ \s]*=.*/\1UDP_IN = "53"/' /etc/csf/csf.conf
-sed -Ei 's/^([ \s]*)UDP6_IN[ \s]*=.*/\1UDP6_IN = "53"/' /etc/csf/csf.conf
+sed -Ei 's/^([ \s]*)UDP_IN[ \s]*=.*/\1UDP_IN = "53,67,68"/' /etc/csf/csf.conf
+sed -Ei 's/^([ \s]*)UDP6_IN[ \s]*=.*/\1UDP6_IN = "53,546,547"/' /etc/csf/csf.conf
 
-sed -Ei 's/^([ \s]*)UDP_OUT[ \s]*=.*/\1UDP_OUT = "53,113,123"/' /etc/csf/csf.conf
-sed -Ei 's/^([ \s]*)UDP6_OUT[ \s]*=.*/\1UDP6_OUT = "53,113,123"/' /etc/csf/csf.conf
+sed -Ei 's/^([ \s]*)UDP_OUT[ \s]*=.*/\1UDP_OUT = "53,113,123,67,68"/' /etc/csf/csf.conf
+sed -Ei 's/^([ \s]*)UDP6_OUT[ \s]*=.*/\1UDP6_OUT = "53,113,123,546,547"/' /etc/csf/csf.conf
 
 sed -Ei 's/^([ \s]*)DENY_IP_LIMIT[ \s]*=.*/\1DENY_IP_LIMIT = "300"/' /etc/csf/csf.conf
 
