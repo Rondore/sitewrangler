@@ -11,6 +11,20 @@ sh install.sh
 rm -fv csf.tgz
 cd "$old_pwd"
 
+if [ -e /usr/bin/apt-get ]; then
+  # Debian/Ubuntu
+  /usr/bin/apt-get install -y libwww-perl
+elif [ -e /usr/bin/dnf ]; then
+  # Fedora / CentOS 8
+  /usr/bin/dnf install -y perl-libwww-perl net-tools perl-LWP-Protocol-https
+elif [ -e /usr/bin/yum ]; then
+  # CentOS 7
+  /usr/bin/yum install perl-libwww-perl net-tools perl-LWP-Protocol-https -y
+elif [ -e /usr/sbin/pkg ]; then
+  # FreeBSD / Solaris
+  # TODO install perl dependencies for csf
+fi
+
 echo 'Conforming CSF to Site Wrangler'
 
 sed -Ei 's/^([ \s]*)TESTING[ \s]*=.*/\1TESTING = "0"/' /etc/csf/csf.conf
