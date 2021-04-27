@@ -154,15 +154,15 @@ def make_vhost(user, domain, php_version):
         domain - The domain associated with the site
         php_version - The PHP version to use
     """
-    template = open(settings.get('install_path') + 'etc/php-fpm-site', 'r')
-    vhost_path = get_enabled_vhost_path(php_version, domain)
-    vhost_dir = os.path.dirname(vhost_path)
-    if not os.path.exists(vhost_dir):
-        os.makedirs(vhost_dir)
-    with open(vhost_path, 'w') as host:
-        for line in template:
-            line = line.replace('USERNAME', user, 10000)
-            host.write(line)
+    with open(settings.get('install_path') + 'etc/php-fpm-site', 'r') as template:
+        vhost_path = get_enabled_vhost_path(php_version, domain)
+        vhost_dir = os.path.dirname(vhost_path)
+        if not os.path.exists(vhost_dir):
+            os.makedirs(vhost_dir)
+        with open(vhost_path, 'w') as host:
+            for line in template:
+                line = line.replace('USERNAME', user, 10000)
+                host.write(line)
     add_logrotate_file(domain)
     print('Created ' + vhost_path)
     restart_service(php_version)
