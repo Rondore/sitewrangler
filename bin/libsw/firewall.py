@@ -210,3 +210,58 @@ exe:/usr/local/nginx/sbin/nginx.old
 def reload():
     pass
     #subprocess.call('csf -r')
+
+def get_blocked_ip_report():
+    deny_file = '/etc/csf/csf.deny'
+    report = ''
+    ip_ranges = []
+    ip_deny_lists = {}
+    with open(deny_file) as deny_content:
+        for block in deny_content:
+            ip = block.split('#')[0].strip()
+            if len(ip) == 0:
+                continue
+            split_ip = ip.split('/')[0].split('.')
+            range = '.'.join(split_ip[:2])
+            if range not in ip_ranges:
+                ip_ranges.append(range)
+                ip_deny_lists[range] = []
+            ip_deny_lists[range].append(block)
+    counted_ip_ranges = []
+    for range in ip_ranges:
+        counted_ip_ranges.append([range, len(ip_deny_lists[range])])
+    counted_ip_ranges = sorted(counted_ip_ranges, key=lambda x: x[1], reverse=True)
+    return counted_ip_ranges, ip_deny_lists
+
+def get_printed_ip_report():
+    report = ''
+    counted_ip_ranges, ip_deny_list = get_blocked_ip_report()
+    counted_ip_ranges = counted_ip_ranges[:10]
+    counted_ip_ranges.reverse()
+    for counted_range in counted_ip_ranges:
+        range, count = counted_range
+        deny_list = ip_deny_list[range]
+        ip_list = list(map(lambda x: x.split('#')[0].strip(), deny_list))
+        ip_match_pattern = get_common_ip_segment(ip_list)
+        if len(report) > 0:
+            report += '\n'
+        report += ' ### ' + ip_match_pattern
+        if len(deny_list) > 1:
+            report += '*'
+        report += ' ###\n'
+        report += 'IP Count: ' + str(len(deny_list)) + '\n\n'
+        for deny in deny_list[:10]:
+            report += deny
+    return report
+
+def get_common_ip_segment(ip_array):
+    if len(ip_array) == 0:
+        return ''
+    match = ''
+    for i in range(0, len(ip_array[0])):
+        match_char = ip_array[0][i]
+        for ip in ip_array:
+            if ip[i] != match_char:
+                return match
+        match += match_char
+    return match
