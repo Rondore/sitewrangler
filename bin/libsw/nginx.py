@@ -488,6 +488,10 @@ http {
 
     include /usr/local/nginx/conf/blocklist.conf;
 
+    server {
+        return 404;
+    }
+
     ##
     # Virtual Host Configs
     ##
@@ -507,7 +511,8 @@ http {
         with open(systemd_file, 'w+') as unit_file:
             unit_file.write('[Unit]\n')
             unit_file.write('Description=The Nginx Webserver and Proxy\n')
-            unit_file.write('After=network.target\n')
+            unit_file.write('Wants=network-online.target\n')
+            unit_file.write('After=network-online.target\n')
             unit_file.write('\n')
             unit_file.write('[Service]\n')
             unit_file.write('Type=forking\n')
