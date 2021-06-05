@@ -20,7 +20,7 @@ elif [ -e /usr/bin/dnf ]; then
 elif [ -e /usr/bin/yum ]; then
   # CentOS 7
   /usr/bin/yum install perl-libwww-perl net-tools perl-LWP-Protocol-https unzip -y
-elif [ -e /usr/sbin/pkg ]; then
+#elif [ -e /usr/sbin/pkg ]; then
   # FreeBSD / Solaris
   # TODO install perl dependencies for csf
 fi
