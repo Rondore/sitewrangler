@@ -408,6 +408,49 @@ def change_version(domain, old_version, new_version):
     restart_service(new_version)
     print('Done')
 
+def get_prerelease_user(force_refresh=False):
+    """
+    Get the php.net username associated with the latest prerelease version
+
+    Args:
+        force_refresh - (optional) When set to True, do not use cached values
+    """
+    cache_dir = settings.get('install_path') + 'var/cache/'
+    cache_file = cache_dir + 'php-prerelease-user'
+    use_cache = force_refresh == False
+    prerelease_user = '';
+
+    if os.path.exists(cache_file):
+        max_age = settings.get_num('build_cache_age')
+        mod_time = os.stat(cache_file).st_mtime
+        age = time.time() - mod_time
+        if age > max_age:
+            use_cache = False
+    else:
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir)
+        use_cache = False
+
+    if use_cache:
+        file_array = file_filter.get_trimmed_file_as_array(cache_file)
+        if len(file_array) > 0:
+            return file_array[0]
+        else:
+            return ''
+    else:
+        request = requests.get('https://www.php.net/')
+        regex = re.compile(r'.*"https://downloads\.php\.net/~([a-zA-Z0-9]*)/".*')
+        for line in request.text.splitlines():
+            match = regex.match(line)
+            if match == None:
+                continue
+            match = match.group(1)
+            if len(match) > 0:
+                prerelease_user = match
+        with open(cache_file, 'w+') as cache_write:
+            cache_write.write(prerelease_user + "\n")
+        return prerelease_user
+
 def get_updated_versions(force_refresh=False):
     """
     Get the full version numbers of versions avaliable at php.net.
@@ -468,7 +511,7 @@ def get_updated_versions(force_refresh=False):
         return vers
 
 def get_prerelease_version(version_array):
-    request = requests.get('https://downloads.php.net/~carusogabriel/')
+    request = requests.get('https://downloads.php.net/~' + get_prerelease_user(True) + '/')
     regex = re.compile(r'.*<a href="php-([0-9\.]*)([a-zA-Z]*)([0-9]+)\.tar\.bz2">.*')
     latest = False
     for line in request.text.splitlines():
@@ -831,14 +874,15 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         full_version = self.versions['full']
         source = 'https://www.php.net/distributions/php-' + full_version + '.tar.bz2'
         if settings.get_bool('enable_php_prerelease_version'):
+            prerelease_username = get_prerelease_user()
             if '.a.' in full_version:
-                source = 'https://downloads.php.net/~carusogabriel/php-' + full_version.replace('.a.', 'alpha') + '.tar.bz2'
+                source = 'https://downloads.php.net/~' + prerelease_username + '/php-' + full_version.replace('.a.', 'alpha') + '.tar.bz2'
             if '.b.' in full_version:
-                source = 'https://downloads.php.net/~carusogabriel/php-' + full_version.replace('.b.', 'beta') + '.tar.bz2'
+                source = 'https://downloads.php.net/~' + prerelease_username + '/php-' + full_version.replace('.b.', 'beta') + '.tar.bz2'
             if '.r.' in full_version:
-                source = 'https://downloads.php.net/~carusogabriel/php-' + full_version.replace('.r.', 'rc') + '.tar.bz2'
+                source = 'https://downloads.php.net/~' + prerelease_username + '/php-' + full_version.replace('.r.', 'rc') + '.tar.bz2'
             if '.R.' in full_version:
-                source = 'https://downloads.php.net/~carusogabriel/php-' + full_version.replace('.R.', 'RC') + '.tar.bz2'
+                source = 'https://downloads.php.net/~' + prerelease_username + '/php-' + full_version.replace('.R.', 'RC') + '.tar.bz2'
         return source
 
     def dependencies(self):
