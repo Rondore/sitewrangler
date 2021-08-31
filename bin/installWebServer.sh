@@ -61,6 +61,7 @@ cd /usr/include
 
 #python
 #$pip install --upgrade pip
+$pip install argcomplete
 $pip install fallocate
 $pip install inquirer
 $pip install python-iptables

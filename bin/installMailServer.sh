@@ -22,6 +22,7 @@ eximConfig="monolithic"
 
 echo 'Stage 1: Installing prerequsites'
 
+pip="pip3"
 if [ -e /usr/bin/apt-get ]; then
   # Debian/Ubuntu
   eximConfig="split"
@@ -46,7 +47,12 @@ elif [ -e /usr/bin/yum ]; then
   # exim4-daemon-heavy dovecot-imapd letsencrypt
 elif [ -e /usr/sbin/pkg ]; then
   # FreeBSD
-  /usr/sbin/pkg install -y python36 py36-pip bind914 screen exim dovecot logrotate ca_root_nss
+  if [ "$(echo "$release" | grep '^ID=')" == "ID=solaris" ]; then
+    pip="pip-3.5"
+    /usr/sbin/pkg install -y python36 pip-35 pkg://solaris/service/network/dns/bind screen exim dovecot logrotate ca_root_nss
+  else
+    /usr/sbin/pkg install -y python36 py36-pip bind914 screen exim dovecot logrotate ca_root_nss
+  fi
   # MAYBE: rndc-confgen -a
   ln -s /usr/local/bin/pip-3.6 /usr/local/bin/pip3
   ln -s /usr/local/bin/python3.6 /usr/local/bin/python3
@@ -57,13 +63,14 @@ echo 'Stage 2: Install Python Dependancies'
 cd /usr/include
 
 #python
-#pip3 install --upgrade pip
-pip3 install fallocate
-pip3 install inquirer
-pip3 install python-iptables
-pip3 install wget
-pip3 install python-dateutil
-pip3 install tabulate
+#$pip install --upgrade pip
+$pip install argcomplete
+$pip install fallocate
+$pip install inquirer
+$pip install python-iptables
+$pip install wget
+$pip install python-dateutil
+$pip install tabulate
 
 echo 'Stage 3: Add crons'
 
