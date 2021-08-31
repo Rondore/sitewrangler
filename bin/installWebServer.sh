@@ -38,7 +38,7 @@ if [ -e /usr/bin/apt-get ]; then
   fi
 elif [ -e /usr/bin/dnf ]; then
   # Fedora / CentOS 8
-  /usr/bin/dnf install -y gcc gcc-c++ make automake autoconf wget git bind python36 python3-pip libxml2-devel libzip-devel libpng-devel libxslt-devel libjpeg-turbo-devel libpq-devel libtool pcre pcre-devel krb5-devel pam-devel libmemcached-libs autoconf mariadb mariadb-server pkgconf-pkg-config readline-devel clamd clamav-update clamav sqlite-devel bzip2-devel oniguruma-devel
+  /usr/bin/dnf install -y gcc gcc-c++ make automake autoconf wget git bind python36 python3-pip libxml2-devel libzip-devel libpng-devel libxslt-devel libjpeg-turbo-devel libpq-devel libtool pcre pcre-devel krb5-devel pam-devel libmemcached-libs autoconf mariadb mariadb-server pkgconf-pkg-config readline-devel clamd clamav-update clamav sqlite-devel bzip2-devel oniguruma-devel platform-python-devel
   # libfcgi-dev libfcgi0ldbl libbz2-dev libjpeg-dev libfreetype6-dev certbot letsencrypt GeoIP-devel python-mysql3.connector screen
 elif [ -e /usr/bin/yum ]; then
   # CentOS 7

@@ -37,7 +37,7 @@ if [ -e /usr/bin/apt-get ]; then
   /usr/bin/apt-get install -y bind9 dovecot-core dovecot-imapd python3-pip screen certbot letsencrypt exim4 exim4-daemon-heavy spamassassin sysstat
 elif [ -e /usr/bin/dnf ]; then
   # Fedora / CentOS 8
-  /usr/bin/dnf install -y bind dovecot-core dovecot-imapd python3-pip certbot letsencrypt exim exim4-daemon-heavy spamassassin
+  /usr/bin/dnf install -y bind dovecot-core dovecot-imapd python3-pip certbot letsencrypt exim exim4-daemon-heavy spamassassin platform-python-devel
   # screen
 elif [ -e /usr/bin/yum ]; then
   # CentOS 7
