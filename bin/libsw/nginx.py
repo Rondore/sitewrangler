@@ -111,7 +111,7 @@ def make_vhost(username, domain, template_name='php', template_fields=False):
     local_ip = settings.get('local_ip')
     public_ip = settings.get('public_ip')
     ip6 = settings.get('ip6')
-    if not ip6:
+    if not ip6 or ip6 == 'False':
         ip6 = '::'
     read_path = template_path(template_name)
     fields = get_vhost_headers(read_path)[0]
@@ -201,7 +201,7 @@ def add_ssl_to_site_hosts(domain):
     local_ip = settings.get('local_ip')
     public_ip = settings.get('public_ip')
     ip6 = settings.get('ip6')
-    if not ip6:
+    if not ip6 or ip6 == 'False':
         ip6 = '::'
     modsec = get_modsec_path(domain)
     fields, username, domain, template = get_vhost_headers(full_file)
