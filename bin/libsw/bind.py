@@ -246,13 +246,17 @@ def make_zone(domain):
     ns2 = settings.get('nameserver_two')
     dns_authority = settings.get('dns_authority')
     ip = settings.get('public_ip')
+    ip6 = settings.get('ip6')
     with open(zone_filename(domain), 'w') as zone:
         for line in template:
+            if (ip6 == False or ip6 == 'False') and 'IPV66' in line:
+                continue;
             line = line.replace('DOMAINNAMEE', domain, 10000)
             line = line.replace('NAMESERVER_ONEE', ns1, 10000)
             line = line.replace('NAMESERVER_TWOO', ns2, 10000)
             line = line.replace('DNS_AUTHORITYY', dns_authority, 10000)
             line = line.replace('PUBLIC_IPP', ip, 10000)
+            line = line.replace('IPV66', ip6, 10000)
             zone.write(line)
 
 def enable_zone(domain):
