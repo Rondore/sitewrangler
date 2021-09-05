@@ -160,6 +160,7 @@ def _get_default_settings():
 
         'local_ip': '',
         'public_ip': '',
+        'ip6': False,
         'max_build_load': '1.0',
         'db_root_requires_password': False,
         'mysql_socket': '/var/run/mysqld/mysqld.sock',

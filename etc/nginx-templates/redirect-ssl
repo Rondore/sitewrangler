@@ -10,6 +10,7 @@ limit_req_zone $binary_remote_addr zone=UNDERDOMAINN:1m rate=15r/m;
 server {
 
     listen LOCALIPP:80 ;
+    listen [IPV66]:80 ;
 
     server_name DOMAINNAMEE www.DOMAINNAMEE;
 
@@ -34,6 +35,7 @@ server {
 server {
 
     listen LOCALIPP:443 ssl http2 ;
+    listen [IPV66]:443 ssl http2 ;
 
     server_name DOMAINNAMEE www.DOMAINNAMEE;
 

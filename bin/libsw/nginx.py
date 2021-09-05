@@ -110,6 +110,9 @@ def make_vhost(username, domain, template_name='php', template_fields=False):
     vhost_path = get_vhost_path(domain)
     local_ip = settings.get('local_ip')
     public_ip = settings.get('public_ip')
+    ip6 = settings.get('ip6')
+    if not ip6:
+        ip6 = '::'
     read_path = template_path(template_name)
     fields = get_vhost_headers(read_path)[0]
     if not template_fields:
@@ -133,6 +136,7 @@ def make_vhost(username, domain, template_name='php', template_fields=False):
                 line = line.replace('HOMEDIRR', home, 10000)
                 line = line.replace('LOCALIPP', local_ip, 10000)
                 line = line.replace('PUBLICIPP', public_ip, 10000)
+                line = line.replace('IPV66', ip6, 10000)
                 line = line.replace('MODSECC', modsec, 10000)
                 for key, value in template_fields:
                     line = line.replace(key, value, 10000)
@@ -196,6 +200,9 @@ def add_ssl_to_site_hosts(domain):
     full_file = get_vhost_path(domain)
     local_ip = settings.get('local_ip')
     public_ip = settings.get('public_ip')
+    ip6 = settings.get('ip6')
+    if not ip6:
+        ip6 = '::'
     modsec = get_modsec_path(domain)
     fields, username, domain, template = get_vhost_headers(full_file)
     dash_domain = domain.replace('.', '-')
@@ -235,6 +242,7 @@ def add_ssl_to_site_hosts(domain):
                     line = line.replace('HOMEDIRR', home, 10000)
                     line = line.replace('LOCALIPP', local_ip, 10000)
                     line = line.replace('PUBLICIPP', public_ip, 10000)
+                    line = line.replace('IPV66', ip6, 10000)
                     line = line.replace('MODSECC', modsec, 10000)
                     for field in fields:
                         key, value = field
