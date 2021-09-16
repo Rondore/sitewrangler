@@ -105,3 +105,6 @@ fi
 echo 'include /opt/sitewrangler/etc/logrotate.d' > /etc/logrotate.d/sitewrangler.conf
 
 sed -i 's/^ENABLED=.*/ENABLED="true"/' /etc/default/sysstat
+
+echo "/usr/local/lib64\n/usr/local/lib" > /etc/ld.so.conf.d/aa_sitewrangler.conf
+ldconfig
