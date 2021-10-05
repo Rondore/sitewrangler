@@ -86,7 +86,7 @@ def remove_lib32(log):
     Args:
         log - An open log to write to
     """
-    files = ['pkgconfig/libssl.pc','pkgconfig/openssl.pc','libcrypto.a', 'libcrypto.so', 'libcrypto.so.1.1', 'libssl.a', 'libssl.so', 'libssl.so.1.1']
+    files = ['pkgconfig/libssl.pc', 'pkgconfig/openssl.pc', 'pkgconfig/libcrypto.pc', 'libcrypto.a', 'libcrypto.so', 'libcrypto.so.1.1', 'libssl.a', 'libssl.so', 'libssl.so.1.1']
     for f in files:
         file = '/usr/local/lib64/' + f
         if os.path.exists(file):
