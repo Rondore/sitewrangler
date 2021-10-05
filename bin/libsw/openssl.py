@@ -46,6 +46,11 @@ class OpensslBuilder(builder.AbstractArchiveBuilder):
         super().install(log)
         deploy_environment(log)
 
+    def cleanup_old_versions(self, log):
+        super().cleanup_old_versions(log)
+        if(int(self.source_version.split('.')[0]) >= 3):
+            remove_lib32(log)
+
 def libs_path():
     path = settings.get('openssl_libs')
     if path == 'unset':
@@ -73,3 +78,17 @@ def deploy_environment(log):
         ld_filter = file_filter.AppendUnique(filename, libs_path())
         ld_filter.run()
     subprocess.run(['ldconfig'])
+
+def remove_lib32(log):
+    """
+    Remove the old lib and pkg-config files that conflict with those of openssl 3
+
+    Args:
+        log - An open log to write to
+    """
+    files = ['pkgconfig/libssl.pc','pkgconfig/openssl.pc','libcrypto.a', 'libcrypto.so', 'libcrypto.so.1.1', 'libssl.a', 'libssl.so', 'libssl.so.1.1']
+    for f in files:
+        file = '/usr/local/lib64/' + f
+        if os.path.exists(file):
+            os.remove(file)
+            log.log('Deleted ' + file)
