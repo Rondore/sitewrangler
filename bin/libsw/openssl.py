@@ -88,7 +88,7 @@ def remove_lib32(log):
     """
     files = ['pkgconfig/libssl.pc', 'pkgconfig/openssl.pc', 'pkgconfig/libcrypto.pc', 'libcrypto.a', 'libcrypto.so', 'libcrypto.so.1.1', 'libssl.a', 'libssl.so', 'libssl.so.1.1']
     for f in files:
-        file = '/usr/local/lib64/' + f
+        file = '/usr/local/lib/' + f
         if os.path.exists(file):
             os.remove(file)
             log.log('Deleted ' + file)
