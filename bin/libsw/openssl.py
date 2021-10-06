@@ -49,7 +49,7 @@ class OpensslBuilder(builder.AbstractArchiveBuilder):
     def cleanup_old_versions(self, log):
         super().cleanup_old_versions(log)
         if(int(self.source_version.split('.')[0]) >= 3):
-            remove_lib32(log)
+            setup_lib32(log)
 
 def libs_path():
     path = settings.get('openssl_libs')
@@ -79,16 +79,26 @@ def deploy_environment(log):
         ld_filter.run()
     subprocess.run(['ldconfig'])
 
-def remove_lib32(log):
+def setup_lib32(log):
     """
-    Remove the old lib and pkg-config files that conflict with those of openssl 3
+    Update the lib directory by pointing pkg-config files to lib64 for openssl 3
 
     Args:
         log - An open log to write to
     """
-    files = ['pkgconfig/libssl.pc', 'pkgconfig/openssl.pc', 'pkgconfig/libcrypto.pc', 'libcrypto.a', 'libcrypto.so', 'libcrypto.so.1.1', 'libssl.a', 'libssl.so', 'libssl.so.1.1']
+    files = ['libcrypto.a', 'libcrypto.so', 'libcrypto.so.1.1', 'libssl.a', 'libssl.so', 'libssl.so.1.1']
+    links = ['pkgconfig/libssl.pc', 'pkgconfig/openssl.pc', 'pkgconfig/libcrypto.pc']
     for f in files:
         file = '/usr/local/lib/' + f
         if os.path.exists(file):
             os.remove(file)
             log.log('Deleted ' + file)
+    for l in links:
+        link = '/usr/local/lib/' + l
+        target = '/usr/local/lib64/' + l
+        if not os.path.islink(link):
+            if os.path.exists(link):
+                os.remove(file)
+                log.log('Deleted ' + file)
+            os.symlink(target, link)
+            log.log('Created link ' + link + ' -> ' + target)
