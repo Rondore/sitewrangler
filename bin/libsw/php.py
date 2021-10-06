@@ -996,6 +996,7 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
             log.log('Rebuilding PHP configure file to include PECL libraries')
             os.remove(self.source_dir() + 'configure')
             log.run([self.source_dir() + 'buildconf', '--force'])
+        remove_ssl2(log, self.source_dir() + 'ext/openssl/openssl.c')
 
 def install_wp_cli():
     """Install or reinstall the WordPress CLI."""
@@ -1015,3 +1016,25 @@ def is_same_subversion(versions, version_string):
     """Determine if two versions have the same first two numbers."""
     ver2 = version.get_tree(version_string)
     return versions['sub'] == ver2['sub']
+
+class OpenSSL3Complier(file_filter.FileFilter):
+    def __init__(self, file, log):
+        self.log = log
+        super().__init__(file)
+
+    def filter_stream(self, in_stream, out_stream):
+        updated = False
+        for line in in_stream:
+            if 'RSA_SSLV23_PADDING' in line:
+                out_stream.write('#ifdef RSA_SSLV23_PADDING')
+                out_stream.write(line)
+                out_stream.write('#endif')
+                updated = True
+                self.log.log('Forced compatibility with OpenSSL 3')
+            else:
+                out_stream.write(line)
+        return updated
+
+
+def remove_ssl2(log, source_file):
+    OpenSSL3Complier(source_file, log).run()
