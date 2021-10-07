@@ -1,6 +1,4 @@
---with-openssl
 --with-libxml
---with-curl
 --with-jpeg
 --with-zip
 --enable-gd

@@ -1,1 +1,3 @@
 --with-mysqli
+--with-openssl
+--with-curl
