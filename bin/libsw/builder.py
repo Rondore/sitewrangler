@@ -311,7 +311,7 @@ class AbstractBuilder(ABC):
             log.log("Running make")
             make_ret_val = self.make(log)
             if make_ret_val != 0: # if not success
-                log.log(self.slug + ' make command failed. Exiting.')
+                log.log(self.slug + ' make command failed. (exit code ' + str(make_ret_val) + ') Exiting.')
             else:
                 log.log("Installing")
                 self.install(log)
