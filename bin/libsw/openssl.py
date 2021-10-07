@@ -98,7 +98,7 @@ def setup_lib32(log):
         target = '/usr/local/lib64/' + l
         if not os.path.islink(link):
             if os.path.exists(link):
-                os.remove(file)
+                os.remove(link)
                 log.log('Deleted ' + file)
             os.symlink(target, link)
             log.log('Created link ' + link + ' -> ' + target)
