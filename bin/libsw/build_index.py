@@ -96,6 +96,26 @@ def view_log(builder):
         return True
     return False
 
+def get_list_with_dependants(slug_array):
+    """
+    Populate a list of slugs with the slugs of all dependant software slugs
+
+    Args:
+        slug_array -  A list of software slugs
+    """
+    new_slug_array = []
+    new_slug_array += slug_array
+    for slug in slug_array:
+        if slug not in new_slug_array:
+            new_slug_array.append(slug)
+        builder = get_builder(slug)
+        for dependant in builder.dependencies():
+            if dependant not in new_slug_array:
+                added_slugs = get_list_with_dependants([dependant])
+                for new_slug in added_slugs:
+                    if new_slug not in slug_array:
+                        new_slug_array.append(new_slug)
+    return new_slug_array
 
 def populate_slug(build_queue, slug):
     """

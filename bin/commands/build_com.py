@@ -48,6 +48,17 @@ def _checkupdate():
 index.register_command('checkupdate', _checkupdate)
 index.register_command('check-update', _checkupdate) # for apt habits :)
 
+def _avaliable_autocomplete(args, end_with_space):
+    if len(args) > 1:
+        return
+    from libsw import build_index
+    slug = args[0].lower()
+    length = len(slug)
+    slug_list = build_index.registered_slugs()
+    for possible_slug in slug_list:
+        if possible_slug[:length] == slug:
+            print(possible_slug)
+
 def _run(first, more):
     from libsw import build_queue, build_index
     slug_list = []
@@ -64,7 +75,7 @@ def _run(first, more):
     build_index.populate_dependant_builders(queue)
     if queue.run() == 0:
         print("Unable to build " + slug_list[0])
-index.register_command('run', _run)
+index.register_command('run', _run, autocomplete=_avaliable_autocomplete)
 
 def _list():
     from libsw import build_index
@@ -73,6 +84,18 @@ def _list():
         print(slug)
 index.register_command('list', _list)
 
+def _installed_autocomplete(args, end_with_space):
+    if len(args) > 1:
+        return
+    from libsw import build_index
+    slug = args[0].lower()
+    length = len(slug)
+    slug_list = build_index.get_installed()
+    slug_list = build_index.get_list_with_dependants(slug_list)
+    for possible_slug in slug_list:
+        if possible_slug[:length] == slug:
+            print(possible_slug)
+
 def _log(slug):
     from libsw import build_index
     if not slug:
@@ -80,7 +103,7 @@ def _log(slug):
     slug = slug.lower()
     if not build_index.view_log(slug):
         print('No log file found for "' + slug + '".')
-index.register_command('log', _log)
+index.register_command('log', _log, autocomplete=_installed_autocomplete)
 
 def _freeze(slug):
     from libsw import builder, build_index
@@ -94,7 +117,21 @@ def _freeze(slug):
             print('Froze ' + slug)
         else:
             print(slug + ' already frozen')
-index.register_command('freeze', _freeze)
+
+def _freeze_autocomplete(args, end_with_space):
+    if len(args) > 1:
+        return
+    from libsw import builder, build_index
+    slug = args[0].lower()
+    length = len(slug)
+    slug_list = build_index.get_installed()
+    slug_list = build_index.get_list_with_dependants(slug_list)
+    frozen_list = builder.list_frozen()
+    for possible_slug in slug_list:
+        if possible_slug[:length] == slug:
+            if possible_slug not in frozen_list:
+                print(possible_slug)
+index.register_command('freeze', _freeze, autocomplete=_freeze_autocomplete)
 
 def _unfreeze(slug):
     from libsw import builder, build_index
@@ -104,8 +141,19 @@ def _unfreeze(slug):
         print(slug + ' is no longer frozen')
     else:
         print(slug + ' was not in the frozen list')
-index.register_command('unfreeze', _unfreeze)
-index.register_command('thaw', _unfreeze)
+
+def _unfreeze_autocomplete(args, end_with_space):
+    if len(args) > 1:
+        return
+    from libsw import build_index
+    slug = args[0].lower()
+    length = len(slug)
+    frozen_list = builder.list_frozen()
+    for possible_slug in frozen_list:
+        if possible_slug[:length] == slug:
+            print(possible_slug)
+index.register_command('unfreeze', _unfreeze, autocomplete=_unfreeze_autocomplete)
+index.register_command('thaw', _unfreeze, autocomplete=_unfreeze_autocomplete)
 
 def _listfreeze():
     from libsw import builder
@@ -127,7 +175,7 @@ def _version(slug):
     slug = slug.lower()
     builder = build_index.get_builder(slug)
     print(builder.version_reference())
-index.register_command('version', _version)
+index.register_command('version', _version, autocomplete=_installed_autocomplete)
 
 def _install_prebuilt(slug, more):
     if not slug:
@@ -143,8 +191,23 @@ def _install_prebuilt(slug, more):
     with open(builder.log_name(), 'w+') as log_output:
         log = logger.Log(log_output)
         builder.install(log)
-index.register_command('installprebuilt', _install_prebuilt)
-index.register_command('install-prebuilt', _install_prebuilt)
+index.register_command('installprebuilt', _install_prebuilt, autocomplete=_avaliable_autocomplete)
+index.register_command('install-prebuilt', _install_prebuilt, autocomplete=_avaliable_autocomplete)
+
+def _avaliable_new_autocomplete(args, end_with_space):
+    if len(args) > 1:
+        return
+    from libsw import build_index
+    slug = args[0].lower()
+    length = len(slug)
+    slug_list = build_index.registered_slugs()
+    installed_list = build_index.get_installed()
+    installed_list = build_index.get_list_with_dependants(installed_list)
+    for possible_slug in slug_list:
+        if possible_slug in installed_list:
+            continue
+        if possible_slug[:length] == slug:
+            print(possible_slug)
 
 def _install(slug, more):
     from libsw import build_index, build_queue, file_filter
@@ -187,7 +250,7 @@ def _install(slug, more):
             for rebuild in needs_rebuild:
                 file_filter.AppendUnique(build_queue.default_failed_file, rebuild).run()
             print('Some packages must now be rebuilt. Run "sw build update" to build them.')
-index.register_command('install', _install)
+index.register_command('install', _install, autocomplete=_avaliable_new_autocomplete)
 
 def _disable(slug, more):
     from libsw import build_index
@@ -215,4 +278,4 @@ def _disable(slug, more):
     if count == 1:
         suffix = 'package'
     print('Enabled ' + str(count) + ' ' + suffix)
-index.register_command('disable', _disable)
+index.register_command('disable', _disable, autocomplete=_installed_autocomplete)
