@@ -20,6 +20,16 @@ def _add(sys_user):
 index.register_command('add', _add)
 index.register_command('create', _add)
 
+def _autocomplete_remove(args, end_with_space):
+    if len(args) > 1:
+        return
+    from libsw import user
+    user_part = args[0].lower()
+    length = len(user_part)
+    for username in user.get_user_list():
+        if username[:length] == user_part:
+            print(username)
+
 def _remove(sys_user, more):
     from libsw import user
     deletefiles = False
@@ -31,8 +41,8 @@ def _remove(sys_user, more):
     #TODO remove mail domain associations for user
     #TODO remove nginx vhosts associatiated with the user
     #TODO maybe remove certs that have no DNS entries and are only assiciated this user's mail and site domains
-index.register_command('remove', _remove)
-index.register_command('delete', _remove)
+index.register_command('remove', _remove, autocomplete=_autocomplete_remove)
+index.register_command('delete', _remove, autocomplete=_autocomplete_remove)
 
 def _list():
     from libsw import user
