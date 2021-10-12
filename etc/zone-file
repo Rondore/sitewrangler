@@ -20,5 +20,5 @@ www	14400	IN	CNAME	DOMAINNAMEE.
 ftp	14400	IN	CNAME	DOMAINNAMEE.
 DOMAINNAMEE.	14400	IN	TXT	"v=spf1 +a +mx +ip4:PUBLIC_IPP -all"
 webmail	14400	IN	CNAME	mail.DOMAINNAMEE.
-_dmarc	14400	IN	TXT	"v=DMARC1; p=quarantine; sp=reject; pct=100 adkim=s aspf=r"
+_dmarc	14400	IN	TXT	"v=DMARC1; p=reject; sp=reject; pct=100 adkim=s aspf=s"
 DOMAINNAMEE.	900	IN	CAA	0	issue	"letsencrypt.org"
