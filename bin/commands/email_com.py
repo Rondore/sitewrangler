@@ -18,6 +18,17 @@ def _help():
     print('sw email status  # Get the service status output for all mail-related services')
 index = command_index.CategoryIndex('email', _help)
 
+def _add_autocomplete(args, end_with_space):
+    if end_with_space or len(args) > 1 or '@' not in args[0]:
+        return
+    address = args[0]
+    user, domain = address.split('@', 1)
+    dom_len = len(domain)
+    from libsw import email
+    for full_domain in email.get_mail_domains():
+        if full_domain[:dom_len] == domain:
+            print(user + '@' + full_domain)
+
 def _add(address):
     from libsw import email
     from getpass import getpass
@@ -36,8 +47,47 @@ def _add(address):
     else:
         from libsw import settings
         print('Error while creating email account. Check to see if the account exists in ' + settings.get('mail_shadow_file'))
-index.register_command('add', _add)
+index.register_command('add', _add, autocomplete=_add_autocomplete)
 index.register_command('create', _add)
+
+def _address_autocomplete(args, end_with_space):
+    if len(args) > 1:
+        return
+    if end_with_space and len(args) == 1 and len(args[0]) > 1:
+        return
+    address = args[0]
+    length = len(address)
+    from libsw import email
+    for full_address in email.get_email_addrs():
+        if full_address[:length] == address:
+            print(full_address)
+
+def _address_or_domain_autocomplete(args, end_with_space):
+    if len(args) > 1:
+        return
+    if end_with_space and len(args) == 1 and len(args[0]) > 1:
+        return
+    argument = args[0]
+    length = len(argument)
+    from libsw import email
+    for full_address in email.get_email_addrs():
+        if full_address[:length] == argument:
+            print(full_address)
+    for full_domain in email.get_mail_domains():
+        if full_domain[:length] == argument:
+            print(full_domain)
+
+def _domain_autocomplete(args, end_with_space):
+    if len(args) > 1:
+        return
+    if end_with_space and len(args) == 1 and len(args[0]) > 1:
+        return
+    domain = args[0]
+    length = len(domain)
+    from libsw import email
+    for full_domain in email.get_mail_domains():
+        if full_domain[:length] == domain:
+            print(full_domain)
 
 def _remove(account, more):
     from libsw import email
@@ -50,8 +100,8 @@ def _remove(account, more):
     if more and more[0].lower() == 'dropfiles':
         drop_files = True
     email.remove_account(account, drop_files)
-index.register_command('remove', _remove)
-index.register_command('delete', _remove)
+index.register_command('remove', _remove, autocomplete=_address_autocomplete)
+index.register_command('delete', _remove, autocomplete=_address_autocomplete)
 
 def _setpass(address):
     from libsw import email
@@ -67,8 +117,8 @@ def _setpass(address):
     else:
         from libsw import settings
         print('Error. Password Not Updated. Check ' + settings.get('mail_shadow_file') + ' for syntax errors.')
-index.register_command('setpass', _setpass)
-index.register_command('setpassword', _setpass)
+index.register_command('setpass', _setpass, autocomplete=_address_autocomplete)
+index.register_command('setpassword', _setpass, autocomplete=_address_autocomplete)
 
 def _checkpass(address):
     from libsw import email
@@ -84,8 +134,25 @@ def _checkpass(address):
         print('Incorrect: ' + error_message)
     else:
         print('Correct')
-index.register_command('checkpass', _checkpass)
-index.register_command('checkpassword', _checkpass)
+index.register_command('checkpass', _checkpass, autocomplete=_address_autocomplete)
+index.register_command('checkpassword', _checkpass, autocomplete=_address_autocomplete)
+
+def _setdomain_autocomplete(args, end_with_space):
+    if len(args) > 2:
+        return
+    if end_with_space and len(args) == 2 and len(args[-1]) > 1:
+        return
+    if len(args) == 1 and (not end_with_space or len(args[0]) == 0):
+        _domain_autocomplete(args, end_with_space)
+        return
+    username = args[-1]
+    if(end_with_space and len(args) == 1):
+        username = ""
+    length = len(username)
+    from libsw import user
+    for full_user in user.get_user_list():
+        if full_user[:length] == username:
+            print(full_user)
 
 def _setdomain(domain, more):
     from libsw import email, user, cert
@@ -103,7 +170,7 @@ def _setdomain(domain, more):
         cert.deploy_exim_domain(domain)
         cert.update_dovecot_ssl()
 
-index.register_command('setdomain', _setdomain)
+index.register_command('setdomain', _setdomain, autocomplete=_setdomain_autocomplete)
 
 def _unsetdomain(domain):
     from libsw import email
@@ -111,7 +178,7 @@ def _unsetdomain(domain):
         domain = email.select_domain()
     email.RemoveMailDomain(domain).run()
     #TODO delete cert from exim
-index.register_command('unsetdomain', _unsetdomain)
+index.register_command('unsetdomain', _unsetdomain, autocomplete=_domain_autocomplete)
 
 def _validate_domain_or_email(domain, domain_vs_email_string):
     from libsw import email
@@ -156,7 +223,7 @@ def _select_domain_over_user(query_message):
 
 def _enablesa(domain_or_email):
     from libsw import email
-    user, domain = _email_validate_domain_or_email(domain_or_email, 'enable SpamAssassin')
+    user, domain = _validate_domain_or_email(domain_or_email, 'enable SpamAssassin')
     dom_or_email = domain
     if user:
         dom_or_email = user + '@' + domain
@@ -164,11 +231,11 @@ def _enablesa(domain_or_email):
         print('Enabled SpamAssassin for ' + dom_or_email)
     else:
         print('SpamAssassin already enabled for ' + dom_or_email)
-index.register_command('enablesa', _enablesa)
+index.register_command('enablesa', _enablesa, autocomplete=_address_or_domain_autocomplete)
 
 def _disablesa(domain_or_email):
     from libsw import email, input_util
-    user, domain = _email_validate_domain_or_email(domain_or_email, 'disable SpamAssassin')
+    user, domain = _validate_domain_or_email(domain_or_email, 'disable SpamAssassin')
     dom_or_email = domain
     if user:
         dom_or_email = user + '@' + domain
@@ -179,11 +246,11 @@ def _disablesa(domain_or_email):
                 _email_sa_disable(domain)
     else:
         print('SpamAssassin already disabled for ' + dom_or_email)
-index.register_command('disablesa', _disablesa)
+index.register_command('disablesa', _disablesa, autocomplete=_address_or_domain_autocomplete)
 
 def _sastatus(domain_or_email):
     from libsw import email
-    user, domain = _email_validate_domain_or_email(domain_or_email, 'get the SpamAssassin status')
+    user, domain = _validate_domain_or_email(domain_or_email, 'get the SpamAssassin status')
     dom_or_email = domain
     if user:
         dom_or_email = user + '@' + domain
@@ -202,7 +269,7 @@ def _sastatus(domain_or_email):
             print('Therefor SpamAssassin is Enabled for ' + dom_or_email)
         else:
             print('Therefor SpamAssassin is Disabled for ' + dom_or_email)
-index.register_command('sastatus', _sastatus)
+index.register_command('sastatus', _sastatus, autocomplete=_address_or_domain_autocomplete)
 
 def _dkim(domain):
     from libsw import email
@@ -212,7 +279,7 @@ def _dkim(domain):
     if not domain:
         domain = email.select_domain()
     email.create_and_install_dkim(domain)
-index.register_command('dkim', _dkim)
+index.register_command('dkim', _dkim, autocomplete=_domain_autocomplete)
 
 def _list():
     from libsw import email
