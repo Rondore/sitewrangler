@@ -48,6 +48,8 @@ def _soa_autocomplete(args, end_with_space):
         _domain_autocomplete(args, end_with_space)
         return
     end_arg = args[-1]
+    if end_with_space and len(args):
+        end_arg = ""
     length = len(end_arg)
     from libsw import bind
     todays_soa = bind.get_todays_soa()
