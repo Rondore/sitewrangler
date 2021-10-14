@@ -15,6 +15,55 @@ def _help():
     print('sw dns (delete|remove) [example.com]  # Delete the zone record for a domain')
 index = command_index.CategoryIndex('dns', _help)
 
+def _domain_autocomplete(args, end_with_space):
+    if len(args) > 1:
+        return
+    if end_with_space and len(args) == 1 and len(args[0]) > 1:
+        return
+    domain = args[0]
+    length = len(domain)
+    from libsw import bind
+    for full_domain in bind.get_zone_file_slugs():
+        if full_domain[:length] == domain:
+            print(full_domain)
+
+def _disabled_domain_autocomplete(args, end_with_space):
+    if len(args) > 1:
+        return
+    if end_with_space and len(args) == 1 and len(args[0]) > 1:
+        return
+    domain = args[0]
+    length = len(domain)
+    from libsw import bind
+    for full_domain in bind.get_disabled_zone_file_slugs():
+        if full_domain[:length] == domain:
+            print(full_domain)
+
+def _soa_autocomplete(args, end_with_space):
+    if len(args) > 2:
+        return
+    if end_with_space and len(args) == 2 and len(args[-1]) > 1:
+        return
+    if len(args) == 1 and (not end_with_space or len(args[0]) == 0):
+        _domain_autocomplete(args, end_with_space)
+        return
+    end_arg = args[-1]
+    length = len(end_arg)
+    from libsw import bind
+    todays_soa = bind.get_todays_soa()
+    if todays_soa[:length] == end_arg:
+        print(todays_soa)
+
+def _checkexpire_autocomplete(args, end_with_space):
+    if len(args) > 1:
+        return
+    if end_with_space and len(args) == 1 and len(args[0]) > 1:
+        return
+    end_arg = args[0]
+    length = len(end_arg)
+    if "emailadmin"[:length] == end_arg:
+        print("emailadmin")
+
 def _soa(tertiary, more):
     from libsw import bind
     domain = False
@@ -35,7 +84,7 @@ def _soa(tertiary, more):
     if soa != False:
         bind.die_if_bad_soa(soa)
     bind.set_soa(soa, domain)
-index.register_command('soa', _soa)
+index.register_command('soa', _soa, autocomplete=_soa_autocomplete)
 
 def _add(domain):
     from libsw import bind
@@ -51,22 +100,22 @@ def _enable(domain):
     if not domain:
         domain = bind.select_disabled_zone('Select domain to enable')
     bind.enable_zone(domain)
-index.register_command('enable', _enable)
+index.register_command('enable', _enable, autocomplete=_disabled_domain_autocomplete)
 
 def _disable(domain):
     from libsw import bind
     if not domain:
         domain = bind.select_main_domain('Select domain to disable')
     bind.disable_zone(domain)
-index.register_command('disable', _disable)
+index.register_command('disable', _disable, autocomplete=_domain_autocomplete)
 
 def _remove(domain):
     from libsw import bind
     if not domain:
         domain = bind.select_main_domain('Select domain to remove')
     bind.remove_zone(domain)
-index.register_command('remove', _remove)
-index.register_command('delete', _remove)
+index.register_command('remove', _remove, autocomplete=_domain_autocomplete)
+index.register_command('delete', _remove, autocomplete=_domain_autocomplete)
 
 def _list():
     from libsw import bind
@@ -92,7 +141,7 @@ def _edit(domain):
     if domain == False:
         domain = bind.select_main_domain("Select zone to edit")
     bind.edit_zone(domain)
-index.register_command('edit', _edit)
+index.register_command('edit', _edit, autocomplete=_domain_autocomplete)
 
 def _reindex():
     from libsw import bind
@@ -104,4 +153,4 @@ def _checkexpire(flag):
     if flag:
         flag = flag.strip().lower()
     bind.check_expiration(flag == 'emailadmin')
-index.register_command('checkexpire', _checkexpire)
+index.register_command('checkexpire', _checkexpire, autocomplete=_checkexpire_autocomplete)
