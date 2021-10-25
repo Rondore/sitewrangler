@@ -448,6 +448,7 @@ def get_prerelease_user(force_refresh=False):
             match = match.group(1)
             if len(match) > 0:
                 prerelease_user = match
+                break
         with open(cache_file, 'w+') as cache_write:
             cache_write.write(prerelease_user + "\n")
         return prerelease_user
