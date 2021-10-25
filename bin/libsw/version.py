@@ -2,7 +2,7 @@
 
 import re
 
-def first_is_higher(v1, v2):
+def first_is_higher(v1, v2, case_insensitive=True):
     """
     Return a boolean value to indicate if the first software version number is
     higher than the second.
@@ -24,6 +24,9 @@ def first_is_higher(v1, v2):
         if v1_node.isdigit() and v2_node.isdigit():
             v1_node = int(v1_node)
             v2_node = int(v2_node)
+        elif case_insensitive:
+            v1_node = v1_node.lower()
+            v2_node = v2_node.lower()
         if v1_node > v2_node:
             return True
         if v2_node > v1_node:
