@@ -999,7 +999,8 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
             log.log('Rebuilding PHP configure file to include PECL libraries')
             os.remove(self.source_dir() + 'configure')
             log.run([self.source_dir() + 'buildconf', '--force'])
-        remove_ssl2(log, self.source_dir() + 'ext/openssl/openssl.c')
+        if version.first_is_higher('8.0.9999', self.versions['full']):
+            remove_ssl2(log, self.source_dir() + 'ext/openssl/openssl.c')
 
 def install_wp_cli():
     """Install or reinstall the WordPress CLI."""
@@ -1029,9 +1030,9 @@ class OpenSSL3Complier(file_filter.FileFilter):
         updated = False
         for line in in_stream:
             if 'RSA_SSLV23_PADDING' in line:
-                out_stream.write('#ifdef RSA_SSLV23_PADDING')
+                out_stream.write('#ifdef RSA_SSLV23_PADDING\n')
                 out_stream.write(line)
-                out_stream.write('#endif')
+                out_stream.write('#endif\n')
                 updated = True
                 self.log.log('Forced compatibility with OpenSSL 3')
             else:
