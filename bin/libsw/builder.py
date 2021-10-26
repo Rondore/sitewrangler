@@ -6,6 +6,7 @@ import wget
 import datetime
 import subprocess
 import glob
+import re
 import shutil
 import platform
 from libsw import logger, version, email, settings, file_filter
@@ -66,6 +67,26 @@ def populate_config_arg_file(file_path, config_array, log):
                 else:
                     config_array.append(arg)
     return config_array
+
+def populate_patch_file(file_path, patch_array, log):
+    if os.path.exists(file_path):
+        with open(file_path) as args:
+            log.log('Reading patches from ' + file_path)
+            for arg in args:
+                arg = arg.strip()
+                name, url = arg.split(maxsplit=1)
+                if len(name) == 0:
+                    continue
+                if name[0] == '!':
+                    clean_name = name[1:]
+                    for pair in patch_array:
+                        if pair[0] == clean_name:
+                            patch_array.remove(pair)
+                    else:
+                        log.log('Unable to remove patch argument ' + clean_name)
+                elif len(url) != 0:
+                    patch_array.append([name, url])
+    return patch_array
 
 class AbstractBuilder(ABC):
     """
@@ -140,6 +161,42 @@ class AbstractBuilder(ABC):
             log - An open log file or null
         """
         pass
+
+    def get_patches(self, log):
+        """
+        Get an array of patches used to modify the source code prior to configure or make commands.
+        The array is populated by two entry arrays structered like this:
+        ['Patch-Name', 'https://example.com/patch']
+
+        Args:
+            log - An open log file
+        """
+        patch_array = []
+        patch_directory = settings.get('install_path') + 'etc/build-patchs/' + self.slug
+        patch_array = populate_patch_file(patch_directory, patch_array, log)
+        patch_directory = settings.get('install_path') + 'etc/build-patches/user/' + self.slug
+        patch_array = populate_patch_file(patch_directory, patch_array, log)
+        return patch_array
+
+    def apply_patches(self, log):
+        """
+        Apply patches to the source code prior to configure or make commands.
+
+        Args:
+            log - An open log file
+        """
+        patch_array = self.get_patches(log)
+        local_dir = settings.get('install_path') + 'var/cache/patches/' + self.slug + '/'
+        if len(patch_array) > 0 and not os.path.exists(local_dir):
+            os.makedirs(local_dir)
+        for name, url in patch_array:
+            local_file = local_dir + name
+            if not os.path.exists(local_file):
+                wget.download(url, local_file)
+            log.log('Applying patch ' + name)
+            patch_command = ['patch', '-ruN', '-p1', '-d', self.source_dir(), '-i', local_file]
+            retval = log.run(patch_command)
+            log.log('Done applying patch ' + name)
 
     def get_config_arg_file(self):
         """
@@ -298,6 +355,7 @@ class AbstractBuilder(ABC):
             if not is_frozen(self.slug):
                 log.log('Fetching ' + source_url)
                 self.fetch_source(source_url, log)
+                self.apply_patches(log)
             os.chdir(self.source_dir())
             log.log("Running pre-config")
             self.run_pre_config(log)
