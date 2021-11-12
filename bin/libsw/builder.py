@@ -351,6 +351,8 @@ class AbstractBuilder(ABC):
         with open(logfile, 'w+') as open_log:
             log = logger.Log(open_log)
             log.log("Build started for " + self.slug + " at " + str(datetime.datetime.now()))
+            if is_frozen(self.slug):
+                log.log("Note: Running rebuild of frozen package")
             source_url = self.get_source_url()
             if not is_frozen(self.slug):
                 log.log('Fetching ' + source_url)
@@ -465,6 +467,11 @@ class AbstractArchiveBuilder(AbstractBuilder):
         """
         pass
 
+    def updated_version_reference(self):
+        if is_frozen(self.slug):
+            return self.version_reference()
+        return self.get_updated_version()
+
     def cleanup_old_versions(self, log):
         """
         Remove old old build directories and log files.
@@ -490,12 +497,12 @@ class AbstractArchiveBuilder(AbstractBuilder):
         old = self.get_installed_version()
         if old == False or len(old) == 0:
             return True
-        new = self.get_updated_version()
+        new = self.updated_version_reference()
         return version.first_is_higher(new, old)
 
     def log_name(self):
         if not self.source_version:
-            self.source_version = self.get_updated_version()
+            self.source_version = self.updated_version_reference()
         name = settings.get('install_path') + 'var/log/build/' + self.slug
         if self.source_version and len(self.source_version) > 0:
             name += '-' + self.source_version
@@ -529,7 +536,7 @@ class AbstractArchiveBuilder(AbstractBuilder):
 
     def build(self):
         if not self.source_version:
-            self.source_version = self.get_updated_version()
+            self.source_version = self.updated_version_reference()
         return super().build()
 
 class AbstractGitBuilder(AbstractBuilder):
