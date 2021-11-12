@@ -145,7 +145,7 @@ def _unfreeze(slug):
 def _unfreeze_autocomplete(args, end_with_space):
     if len(args) > 1:
         return
-    from libsw import build_index
+    from libsw import build_index, builder
     slug = args[0].lower()
     length = len(slug)
     frozen_list = builder.list_frozen()
