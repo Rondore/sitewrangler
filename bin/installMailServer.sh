@@ -833,5 +833,5 @@ systemctl enable  $exim
 service dovecot restart
 service $exim restart
 
-echo "/usr/local/lib64\n/usr/local/lib" > /etc/ld.so.conf.d/aa_sitewrangler.conf
+echo -e "/usr/local/lib64\n/usr/local/lib" > /etc/ld.so.conf.d/aa_sitewrangler.conf
 ldconfig
