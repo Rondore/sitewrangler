@@ -17,6 +17,7 @@ from shutil import copyfile
 from libsw import logger, curl, file_filter, version, builder, settings, service, user, input_util, pecl
 
 # enable_legacy_versions = settings.get_bool('enable_php_legacy_versions')
+php73version = '7.3.33' # 19 Nov 2021
 php72version = '7.2.34' # 01 Oct 2020
 php71version = '7.1.33' # 18 Dec 2019
 php70version = '7.0.33' # 10 Jan 2019
@@ -489,6 +490,7 @@ def get_updated_versions(force_refresh=False):
             if len(match) > 0:
                 vers.append(match)
         if settings.get_bool('enable_php_legacy_versions'):
+            vers.append(php73version)
             vers.append(php72version)
             vers.append(php71version)
             vers.append(php70version)
