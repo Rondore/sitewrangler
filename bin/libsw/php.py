@@ -23,6 +23,14 @@ php71version = '7.1.33' # 18 Dec 2019
 php70version = '7.0.33' # 10 Jan 2019
 php56version = '5.6.40' # 10 Jan 2019
 
+legacy_versions = [
+    php73version,
+    php72version,
+    php71version,
+    php70version,
+    php56version
+]
+
 # enable_super_legacy_versions = settings.get_bool('enable_php_super_legacy_versions')
 php55version = '5.5.38' # 21 Jul 2016
 php54version = '5.4.45' # 03 Sep 2015
@@ -36,6 +44,21 @@ php42version = '4.2.3' # 6 Sep 2002
 php41version = '4.1.2' # 12 March 2002
 php40version = '4.0.6' # 23 June 2001
 php30version = '3.0.18' # 20 Oct 2000
+
+super_legacy_versions = [
+    php55version,
+    php54version,
+    php53version,
+    php52version,
+    php51version,
+    php50version,
+    php44version,
+    php43version,
+    php42version,
+    php41version,
+    php40version,
+    php30version
+]
 
 def restart_service(version, log=logger.Log(False)):
     """
@@ -489,25 +512,26 @@ def get_updated_versions(force_refresh=False):
             match = match.group(1)
             if len(match) > 0:
                 vers.append(match)
-        if settings.get_bool('enable_php_legacy_versions'):
-            vers.append(php73version)
-            vers.append(php72version)
-            vers.append(php71version)
-            vers.append(php70version)
-            vers.append(php56version)
-        if settings.get_bool('enable_php_super_legacy_versions'):
-            vers.append(php55version)
-            vers.append(php54version)
-            vers.append(php53version)
-            vers.append(php52version)
-            vers.append(php51version)
-            vers.append(php50version)
-            vers.append(php44version)
-            vers.append(php43version)
-            vers.append(php42version)
-            vers.append(php41version)
-            vers.append(php40version)
-            vers.append(php30version)
+
+        use_legacy = settings.get_bool('enable_php_legacy_versions')
+        installed_versions = get_versions()
+        if use_legacy:
+            vers.extend(legacy_versions)
+        else:
+            for legacy in legacy_versions:
+                sub_version = legacy[:legacy.find('.', legacy.find('.')+1)]
+                if sub_version in installed_versions:
+                    vers.append(legacy)
+
+        use_super_legacy = settings.get_bool('enable_php_super_legacy_versions')
+        if use_super_legacy:
+            vers.extend(super_legacy_versions)
+        else:
+            for legacy in super_legacy_versions:
+                sub_version = legacy[:legacy.find('.', legacy.find('.')+1)]
+                if sub_version in installed_versions:
+                    vers.append(legacy)
+
         if settings.get_bool('enable_php_prerelease_version'):
             vers.extend(get_prerelease_version(vers))
         with open(cache_file, 'w+') as cache_write:
@@ -614,7 +638,7 @@ def deploy_environment(versions, log):
         firewall.writepignore()
         log.run('lfd', '-r')
 
-def remove_environment(subversion):
+def remove_environment(subversion, log):
     """
     Remove a version of PHP from the system.
 
@@ -623,20 +647,27 @@ def remove_environment(subversion):
     """
     fullversion = get_installed_version(subversion)
     service.stop('php-' + subversion + '-fpm')
+    log.log('Stopped php-' + subversion + '-fpm')
     service.disable('php-' + subversion + '-fpm')
+    log.log('php-' + subversion + '-fpm disabled')
     binfile = '/usr/local/bin/php-' + subversion
     if os.path.exists(binfile):
         os.unlink(binfile)
+        log.log('Removed ' + binfile)
     installpath = '/opt/php-' + subversion + '/'
     if os.path.exists(installpath):
         shutil.rmtree(installpath)
+        log.log('Deleted ' + installpath)
     servicefile = '/lib/systemd/system/php-' + subversion + '-fpm.service'
     if os.path.exists(servicefile):
         os.remove(servicefile)
-    service.reload_init()
+        log.log('Deleted ' + servicefile)
+        service.reload_init()
+        log.run(['systemctl','reset-failed','php-' + subversion + '-fpm'])
     sourcepath = '/usr/local/src/php-' + fullversion + '/'
     if os.path.exists(sourcepath):
         shutil.rmtree(sourcepath)
+        log.log('Deleted ' + sourcepath)
 
 def detect_distro_code():
     """
@@ -929,6 +960,22 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
     def install(self, log):
         super().install(log)
         deploy_environment(self.versions, log)
+
+    def uninstall(self, log):
+        log.log('Uninstalling ' + self.slug)
+        remove_environment(self.versions['sub'], log)
+        log.log(self.slug + ' uninstalled')
+
+    def uninstall_warnings(self):
+        file_list = glob.glob('/opt/php-' + self.versions['sub'] + '/etc/php-fpm.d/*.conf')
+        file_list.extend(glob.glob('/opt/php-' + self.versions['sub'] + '/etc/php-fpm.d/*.conf.disabled'))
+        if len(file_list) > 0:
+            warning = 'There are still enabled/disabled sites for ' + self.slug + ':\n'
+            for file in file_list:
+                warning += file + '\n'
+            return warning
+        else:
+            return False
 
     def build(self):
         if not os.path.exists(self.build_dir + 'imap/c-client/imap4r1.o'):

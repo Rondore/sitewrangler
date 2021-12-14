@@ -4,6 +4,7 @@ from libsw import input_util, command_index
 
 def _help():
     print('sw build install [slug_list]  # Enable a software package and rund a build for it')
+    print('sw build uninstall [slug_list]  # Remove a software package from the system')
     print('sw build disable [slug_list]  # Disable a software package but do not remove it from the system')
     print('sw build update [force]  # Update softare sources and build anthing that needs building')
     print('sw build checkupdate  # Check for updates to software sources and print a list of slugs that need updating')
@@ -251,6 +252,61 @@ def _install(slug, more):
                 file_filter.AppendUnique(build_queue.default_failed_file, rebuild).run()
             print('Some packages must now be rebuilt. Run "sw build update" to build them.')
 index.register_command('install', _install, autocomplete=_avaliable_new_autocomplete)
+
+def _uninstall_autocomplete(args, end_with_space):
+    if len(args) > 1:
+        return
+    from libsw import build_index
+    slug = args[0].lower()
+    length = len(slug)
+    slug_list = build_index.registered_slugs()
+    for possible_slug in slug_list:
+        if possible_slug[:length] == slug:
+            builder = build_index.get_builder(possible_slug)
+            has_uninstall = hasattr(builder, 'uninstall') and callable(builder.uninstall)
+            if has_uninstall:
+                print(possible_slug)
+
+def _uninstall(slug, more):
+    from libsw import build_index, logger
+    import os
+    builder_list = []
+    if slug != False:
+        slug = slug.lower()
+        builder = build_index.get_builder(slug)
+        if builder != False:
+            builder_list.append(builder)
+        else:
+            print('"' + slug + '" not found, skipping...')
+    if more != False and len(more) > 0:
+        for sub_slug in more:
+            sub_slug = sub_slug.lower()
+            builder = build_index.get_builder(sub_slug)
+            if builder != False:
+                builder_list.append(builder)
+            else:
+                print('"' + sub_slug + '" not found, skipping...')
+    valid_builders = []
+    for builder in builder_list:
+        has_uninstall = hasattr(builder, 'uninstall') and callable(builder.uninstall)
+        if(has_uninstall):
+            valid_builders.append(builder)
+        else:
+            print('"' + builder.slug + '" does not have an uninstaller, skipping...')
+    for builder in valid_builders:
+        can_warn = hasattr(builder, 'uninstall_warnings') and callable(builder.uninstall_warnings)
+        if can_warn:
+            warnings = builder.uninstall_warnings()
+            if warnings != False:
+                print("Warning: " + warnings)
+                if not input_util.confirm("Continue anyways?", False):
+                    continue
+        log = logger.Log()
+        builder.uninstall(log)
+        build_index.disable_slug(builder.slug)
+        builder.cleanup_old_versions(log)
+        os.remove(builder.log_name())
+index.register_command('uninstall', _uninstall, autocomplete=_uninstall_autocomplete)
 
 def _disable(slug, more):
     from libsw import build_index
