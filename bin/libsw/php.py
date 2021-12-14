@@ -616,7 +616,7 @@ def deploy_environment(versions, log):
     else:
         with open(systemd_file, 'w+') as unit_file:
             unit_file.write('[Unit]\n')
-            unit_file.write('Description=The PHP $subversion FastCGI Process Manager\n')
+            unit_file.write('Description=The PHP ' + versions['sub'] + ' FastCGI Process Manager\n')
             unit_file.write('After=network.target\n')
             unit_file.write('\n')
             unit_file.write('[Service]\n')
