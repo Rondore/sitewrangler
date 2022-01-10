@@ -4,7 +4,7 @@ import glob
 import re
 import requests
 from abc import abstractmethod
-from libsw import builder
+from libsw import builder, version
 
 class PeclBuilder(builder.AbstractArchiveBuilder):
 
