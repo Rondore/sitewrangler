@@ -606,8 +606,7 @@ def deploy_environment(versions, log):
 
     AddPid(fpm_conf_name).run()
 
-    if not os.path.exists(primary_logrotate_file()):
-        write_primary_logrotate()
+    write_primary_logrotate()
 
     systemd_file = '/lib/systemd/system/php-' + versions['sub'] + '-fpm.service'
 
