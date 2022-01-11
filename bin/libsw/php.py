@@ -1020,7 +1020,7 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         new = self.get_updated_version()
         if version.first_is_higher(new, old):
             self.versions = version.get_tree(new)
-            return build()
+            return self.build()
         return False, False
 
     def cleanup_old_versions(self, log):
