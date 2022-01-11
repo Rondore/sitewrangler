@@ -400,7 +400,6 @@ def install_wp_cli():
     bin_path = '/usr/local/bin/wp'
     if not os.path.exists(install_directory):
         os.makedirs(install_directory)
-    wget.download(download_url, save_file)
     response = requests.get(download_url)
     with open(save_file, "wb") as f:
         f.write(response.content)
