@@ -6,7 +6,7 @@ import subprocess
 import random
 import inquirer
 import stat
-import wget
+import requests
 from libsw import php, nginx, user, bind, cert, db, settings, input_util
 from getpass import getpass
 from mysql import connector
@@ -401,6 +401,9 @@ def install_wp_cli():
     if not os.path.exists(install_directory):
         os.makedirs(install_directory)
     wget.download(download_url, save_file)
+    response = requests.get(download_url)
+    with open(save_file, "wb") as f:
+        f.write(response.content)
     old_mode = os.stat(save_file)
     os.chmod(save_file, old_mode.st_mode | stat.S_IEXEC)
     if not os.path.exists(bin_path):

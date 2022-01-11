@@ -65,7 +65,6 @@ $pip install argcomplete
 $pip install fallocate
 $pip install inquirer
 $pip install python-iptables
-$pip install wget
 $pip install python-dateutil
 $pip install tabulate
 

@@ -2,7 +2,7 @@
 
 import os
 import tarfile
-import wget
+import requests
 import datetime
 import subprocess
 import glob
@@ -192,7 +192,9 @@ class AbstractBuilder(ABC):
         for name, url in patch_array:
             local_file = local_dir + name
             if not os.path.exists(local_file):
-                wget.download(url, local_file)
+                response = requests.get(url)
+                with open(local_file, "w") as f:
+                    f.write(response.text)
             log.log('Applying patch ' + name)
             patch_command = ['patch', '-ruN', '-p1', '-d', self.source_dir(), '-i', local_file]
             retval = log.run(patch_command)
@@ -527,7 +529,9 @@ class AbstractArchiveBuilder(AbstractBuilder):
         tarname = self.build_dir + self.slug + '-' + self.source_version + ext
         if not os.path.exists(self.build_dir):
             os.mkdir(self.build_dir)
-        wget.download(source, tarname)
+        response = requests.get(source)
+        with open(tarname, "wb") as f:
+            f.write(response.content)
         print('')
         with tarfile.open(tarname, type) as tar:
             tar.extractall(self.build_dir)

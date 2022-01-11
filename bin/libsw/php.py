@@ -7,7 +7,6 @@ import subprocess
 import re
 import requests
 import tarfile
-import wget
 import datetime
 import stat
 import shutil
@@ -1056,7 +1055,9 @@ def install_wp_cli():
         os.mkdir('/opt/wp-cli/')
     install_file = '/opt/wp-cli/wp-cli.phar'
     source = 'https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar'
-    wget.download(source, install_file)
+    response = requests.get(source)
+    with open(install_file, "wb") as f:
+        f.write(response.content)
     print('')
     s = os.stat(install_file)
     os.chmod(install_file, s.st_mode | stat.S_IEXEC)

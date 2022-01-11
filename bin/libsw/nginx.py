@@ -6,7 +6,6 @@ import inquirer
 import glob
 import subprocess
 import requests
-import wget
 import tarfile
 from libsw import logger, builder, openssl, settings, service, user, input_util, file_filter
 
