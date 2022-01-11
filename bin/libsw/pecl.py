@@ -48,22 +48,25 @@ class PeclBuilder(builder.AbstractArchiveBuilder):
     def get_updated_version(self):
         if self.up_to_date_version != False :
             return self.up_to_date_version
-        url = 'https://pecl.php.net/get/' + self.get_pecl_slug()
-        response = requests.head(url)
-        field_data = response.headers['Content-Disposition']
-        data_array = field_data.split(';')
-        for data in data_array:
-            data = data.strip()
-            if( data[:9] == 'filename='):
-                filename = data[9:]
-                version = re.match(r'.*-([0-9\.]+)', filename).group(1)
-                if( version[-1:] == '.' ):
-                    version = version[:-1]
-                self.up_to_date_version = version
-                if self.source_version == False:
-                    self.source_version = version
-                return version
-        return '0'
+        url = 'https://pecl.php.net/package/' + self.get_pecl_slug()
+        response = requests.get(url)
+        html = response.text
+        oneBack = ''
+        twoBack = ''
+        link = ''
+        for line in html.splitlines():
+            if 'href="/get/' in line and 'stable' in twoBack:
+                link = re.search(r'href="/get/([^"]*)"', line).group(1)
+                break
+            twoBack = oneBack
+            oneBack = line
+        if len(link) == 0:
+            return '0'
+        version = re.match(r'.*-([0-9\.A-Za-z]+)\.tgz', link).group(1)
+        self.up_to_date_version = version
+        if self.source_version == False:
+            self.source_version = version
+        return version
 
     def source_dir(self, version=False):
         """
