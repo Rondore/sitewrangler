@@ -219,20 +219,20 @@ class BuildQueue():
         # builder.dependencies()
 
         for other_builder in self.dependents:
-            child_wrote = mark_dependents_failed(dep_builder)
+            child_wrote = self.mark_dependents_failed(other_builder)
             if child_wrote:
                 write = False
 
         # for other_builder in self.queue:
         #     if builder.slug in other_builder.dependencies():
-        #         child_wrote = mark_dependents_failed(dep_builder)
+        #         child_wrote = self.mark_dependents_failed(other_builder)
         #         if child_wrote:
         #             write = False
 
         # for dep in dependencies:
         #     dep_builder = self.find(dep)
         #     if dep_builder:
-        #         child_wrote = mark_dependents_failed(dep_builder)
+        #         child_wrote = self.mark_dependents_failed(dep_builder)
         #         if child_wrote:
         #             write = False
         if write:
