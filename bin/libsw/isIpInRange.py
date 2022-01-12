@@ -16,6 +16,6 @@ if __name__ == '__main__':
         sys.exit(1)
 
     if ip.is_ip_in_range(addr,range):
-        print 'true'
+        print('true')
     else:
-        print 'false'
+        print('false')
