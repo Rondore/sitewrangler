@@ -7,6 +7,7 @@ import subprocess
 import platform
 import pwd
 import grp
+import shutil
 from email.mime.text import MIMEText
 from libsw import file_filter, user, bind, service, settings
 
@@ -359,6 +360,7 @@ def remove_account(account, delete_files=False):
     user, domain = account.lower().split('@')
     RemoveMailAccount(account).run()
     if delete_files:
+        sys_user = get_account_from_domain(domain)
         shutil.rmtree(configuration_directory(domain, user, sys_user)) # for filters
         shutil.rmtree(mail_directory(domain, user, sys_user)) # for maildir
 
