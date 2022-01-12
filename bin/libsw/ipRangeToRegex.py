@@ -15,7 +15,7 @@ if __name__ == "__main__":
             pass
 
     if len(sys.argv) < 3:
-        print "Not enough arguments"
+        print("Not enough arguments")
         sys.exit(1)
 
     low_ip = sys.argv[1]
