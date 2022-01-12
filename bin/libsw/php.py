@@ -758,7 +758,7 @@ def write_primary_logrotate():
             os.remove(filename)
     else:
         with open(filename, 'w+') as output:
-            output.write('include ' + install_path + 'etc/logrotate.d/php-sites/*\n\n')
+            output.write('include ' + install_path + 'etc/logrotate.d/php-sites\n\n')
             for version in version_list:
                 output.write('/opt/php-' + version + '/var/log/*.log {\n\
   weekly\n\
