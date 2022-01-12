@@ -92,7 +92,7 @@ def is_key_disabled(key, file):
                     is_key_line_disabled(entry):
                 disabled = True
                 break
-    return found
+    return disabled
 
 def add(key, username):
     """
