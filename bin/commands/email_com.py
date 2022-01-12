@@ -39,7 +39,7 @@ def _add(address):
     if domain == False:
         domain = email.select_domain()
     if user == False:
-        user = input('Enter email name without "@' + dom + '": ')
+        user = input('Enter email name without "@' + domain + '": ')
     email.create_account(user, domain)
     password = email.hash_password( getpass('Email Password: ') )
     if email.SetPassword(user + '@' + domain, password).run():
@@ -243,7 +243,7 @@ def _disablesa(domain_or_email):
         print('Disabled SpamAssassin for ' + dom_or_email)
         if user and email.spamassassin_status(domain):
             if input_util.confirm('Do you also want to disable SpamAssassin for ' + domain + '?'):
-                _email_sa_disable(domain)
+                _disablesa(domain)
     else:
         print('SpamAssassin already disabled for ' + dom_or_email)
 index.register_command('disablesa', _disablesa, autocomplete=_address_or_domain_autocomplete)
