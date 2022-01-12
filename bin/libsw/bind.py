@@ -210,15 +210,15 @@ def rebuild_zone_index():
     #TODO update an area of the configuration file within START and END comments instead of replacing the whole thing
     save_file="/etc/bind/named.conf.local"
     with open(save_file, 'w') as output:
-    	write_zone_index_header(output)
-    	zone_files = glob.glob('/etc/bind/zones/*.db')
-    	for file in zone_files:
-    		domain = re.match(r'.*/([^/]*)\.db', file).group(1)
-    		output.write('\n')
-    		output.write('zone "' + domain + '" {\n')
-    		output.write('	type master;\n')
-    		output.write('	file "' + file + '";\n')
-    		output.write('};\n')
+        write_zone_index_header(output)
+        zone_files = glob.glob('/etc/bind/zones/*.db')
+        for file in zone_files:
+            domain = re.match(r'.*/([^/]*)\.db', file).group(1)
+            output.write('\n')
+            output.write('zone "' + domain + '" {\n')
+            output.write('	type master;\n')
+            output.write('	file "' + file + '";\n')
+            output.write('};\n')
     reload()
 
 def zone_filename(domain):
