@@ -1049,22 +1049,6 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         if version.first_is_higher('8.0.9999', self.versions['full']):
             remove_ssl2(log, self.source_dir() + 'ext/openssl/openssl.c')
 
-def install_wp_cli():
-    """Install or reinstall the WordPress CLI."""
-    if not os.path.exists('/opt/wp-cli/'):
-        os.mkdir('/opt/wp-cli/')
-    install_file = '/opt/wp-cli/wp-cli.phar'
-    source = 'https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar'
-    response = requests.get(source)
-    with open(install_file, "wb") as f:
-        f.write(response.content)
-    print('')
-    s = os.stat(install_file)
-    os.chmod(install_file, s.st_mode | stat.S_IEXEC)
-    symlink_path = '/usr/local/bin/wp'
-    if not os.path.exists(symlink_path):
-        os.symlink(install_file, symlink_path)
-
 def is_same_subversion(versions, version_string):
     """Determine if two versions have the same first two numbers."""
     ver2 = version.get_tree(version_string)
