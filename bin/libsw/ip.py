@@ -84,7 +84,7 @@ def is_ip_in_range(ip, range):
     masked_test_ip = ip_to_binary(ip)[:range_mask]
     return masked_range == masked_test_ip
 
-def make_octal_regex(low, high):
+def make_octal_regex(low, high, strict=False):
     """
     Generate a regular expression that matches a given IPv4 address segment
     range.
@@ -102,6 +102,9 @@ def make_octal_regex(low, high):
     if len(low) > 0 and int(low) > int(high):
         raise Exception('High lower than Low. Low: ' + low + ' High: ' + high)
     if len(low) > 0 and int(low)==0 and int(high)==255:
+        full_range = '[0-9]*'
+        if(strict):
+            full_range = '(1?[0-9]?[0-9]|2([0-4][0-9]|5[0-5]))'
         return full_range
     if low == high:
         return low
@@ -119,11 +122,11 @@ def make_octal_regex(low, high):
 
             if high_single == '9':
                 _debug_print('Form 1A')
-                regex = '(' + make_octal_regex(low, high) + '[0-9])?'
+                regex = '(' + make_octal_regex(low, high, strict) + '[0-9])?'
             else:
                 _debug_print('Form 1B')
                 #high = high[:-1]
-                #regex = '(' + make_octal_regex(low, int(high)-1) + '[0-9]|' + high + '[0-' + high_single + '])?'
+                #regex = '(' + make_octal_regex(low, int(high)-1, strict) + '[0-9]|' + high + '[0-' + high_single + '])?'
                 regex = '([0-9]|' + high + '[0-' + high_single + '])?'
         else:
             if high == '1':
@@ -149,23 +152,23 @@ def make_octal_regex(low, high):
                 low_numeric = int(low)
             if low_single == '0' and high_single == '9':
                 _debug_print('Form 3A')
-                regex = make_octal_regex(low, high) + '[0-9]'
+                regex = make_octal_regex(low, high, strict) + '[0-9]'
             elif low_single == '0':
                 if int(high) == 1:
                     _debug_print('Form 3B')
                     regex = '(' + '[0-9]' + '|' + high + '[0-' + high_single + '])'
                 else:
                     _debug_print('Form 3C')
-                    regex = '(' + make_octal_regex(low, int(high) - 1) + '[0-9]' + '|' + high + '[0-' + high_single + '])'
+                    regex = '(' + make_octal_regex(low, int(high) - 1, strict) + '[0-9]' + '|' + high + '[0-' + high_single + '])'
             elif high_single == '9':
                 _debug_print('Form 3D')
-                regex = '(' + low + '[' + low_single + '-9]|' + make_octal_regex(low_numeric + 1, high) + '[0-9])'
+                regex = '(' + low + '[' + low_single + '-9]|' + make_octal_regex(low_numeric + 1, high, strict) + '[0-9])'
             elif low_numeric == (int(high) - 1):
                 _debug_print('Form 3E')
                 regex = '(' + low + '[' + low_single + '-9]|' + high + '[0-' + high_single + '])'
             else:
                 _debug_print('Form 3F')
-                regex = '(' + low + '[' + low_single + '-9]|' + make_octal_regex(low_numeric + 1, int(high) - 1) + '[0-9]|' + high + '[0-' + high_single + '])'
+                regex = '(' + low + '[' + low_single + '-9]|' + make_octal_regex(low_numeric + 1, int(high) - 1, strict) + '[0-9]|' + high + '[0-' + high_single + '])'
     return regex
 
 def optimize_regex(regex):
@@ -211,7 +214,7 @@ def ip_range_to_regex(low_ip, high_ip, strict=False):
         if split_low[o] == split_high[o]:
             regex += split_low[o] + '\.'
         else:
-            regex += optimize_regex( make_octal_regex(split_low[o], split_high[o]) )
+            regex += optimize_regex( make_octal_regex(split_low[o], split_high[o], strict) )
             break
 
     while(regex_octets < 4):
