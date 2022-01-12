@@ -5,7 +5,7 @@ import re
 import requests
 import glob
 import subprocess
-from libsw import logger, version, builder, settings
+from libsw import logger, version, builder, settings, file_filter
 
 class CurlBuilder(builder.AbstractArchiveBuilder):
     """
@@ -57,7 +57,7 @@ def deploy_environment(log):
     if settings.get_bool('deploy_curl'):
         filename = '/etc/ld.so.conf.d/curl.conf'
         log.log('Making sure ' + filename + ' exists')
-        ld_filter = AppendUnique(filename, libs_path())
+        ld_filter = file_filter.AppendUnique(filename, libs_path())
         ld_filter.run()
     subprocess.run(['ldconfig'])
 
