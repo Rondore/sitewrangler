@@ -207,6 +207,7 @@ def add_ssl_to_site_hosts(domain):
     dash_domain = domain.replace('.', '-')
     under_domain = domain.replace('.', '_')
     field_needle = re.compile('^# Field')
+    field_header_extract = re.compile('(.*:\s*)(\S+)(\s*:\s*)(.*)')
 
     home = user.home_dir(username)
 
