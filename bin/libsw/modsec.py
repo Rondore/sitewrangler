@@ -27,7 +27,7 @@ def get_enabled_rulesets():
     return names
 
 class AbstractRuleset(builder.AbstractBuilder):
-    def get_rule_file():
+    def get_rule_file(self):
         """
         Get the settings and rules from a particular source compiled into a
         single file.
