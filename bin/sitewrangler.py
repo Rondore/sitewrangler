@@ -31,5 +31,8 @@ if __name__ == '__main__':
             more = sys.argv[4:]
         if primary == 'help':
             index.run_help(secondary)
+        if primary == 'selfupdate' or primary == 'self-update':
+            from libsw import recursion
+            recursion.self_update()
         else:
             index.run_command(primary, secondary, tertiary, more)
