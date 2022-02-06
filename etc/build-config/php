@@ -26,3 +26,4 @@
 --with-xsl
 --enable-opcache
 --enable-fpm
+--enable-intl
