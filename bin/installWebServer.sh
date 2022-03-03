@@ -19,7 +19,7 @@ if [ -e /usr/bin/apt-get ]; then
     done
   fi
 
-  /usr/bin/apt-get install -y gcc make automake autoconf wget git bind9 screen build-essential libfcgi-dev libfcgi0ldbl libxml2-dev libbz2-dev libjpeg-dev libpng-dev libfreetype6-dev libpq-dev libxslt1-dev libzip-dev python3-pip libreadline-dev libtool certbot letsencrypt libkrb5-dev libpam0g-dev libmemcached-dev autoconf pkg-config mariadb-client mariadb-server libpcre3-dev libsqlite3-dev libonig-dev sysstat clamav clamav-daemon libgd-dev
+  /usr/bin/apt-get install -y gcc make automake autoconf wget git bind9 screen build-essential libfcgi-dev libfcgi0ldbl libxml2-dev libbz2-dev libjpeg-dev libpng-dev libfreetype6-dev libpq-dev libxslt1-dev libzip-dev python3-pip libreadline-dev libtool certbot letsencrypt libkrb5-dev libpam0g-dev libmemcached-dev autoconf pkg-config mariadb-client mariadb-server libpcre3-dev libsqlite3-dev libonig-dev sysstat clamav clamav-daemon libgd-dev webp libwebp-dev libheif-dev
   # for php 7.4 libsqlite3-dev libonig-dev
 
   release=$(cat /etc/*release)
