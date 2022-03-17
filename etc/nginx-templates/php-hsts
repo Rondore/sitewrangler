@@ -4,7 +4,6 @@
 # Field    : HSTSLENTHH : 31536000
 # Field    : HSTSPRELOADD : ; preload
 
-
 proxy_cache_path /usr/local/nginx/cache/USERNAMEE levels=1 keys_zone=USERNAMEE:128m inactive=1h;
 
 limit_req_zone $binary_remote_addr zone=UNDERDOMAINN:1m rate=15r/m;
@@ -50,7 +49,6 @@ server {
 
     server_name webmail.DOMAINNAMEE mail.DOMAINNAMEE;
 
-
     location ~ "^/(\.well-known\/|[A-Fa-f0-9]{32}.txt$)" {
         root HOMEDIRRpublic_html;
     }
@@ -74,7 +72,6 @@ server {
 
     ssl_certificate /etc/letsencrypt/live/DOMAINNAMEE/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/DOMAINNAMEE/privkey.pem;
-    add_header Strict-Transport-Security "max-age=HSTSLENTHH; includeSubDomainsHSTSPRELOADD" always;
 
     root HOMEDIRRpublic_html;
 
@@ -87,16 +84,15 @@ server {
     gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript;
     gzip_vary on;
 
-    proxy_cache USERNAMEE;
-    proxy_ignore_headers Cache-Control Expires ;
-    proxy_cache_valid 200 14400s;
-    proxy_cache_valid 406 0s;
-    proxy_cache_valid 404 10s;
-    proxy_cache_valid 500 0;
-    proxy_cache_use_stale updating error timeout http_502 http_503 http_504;
-    proxy_cache_lock on;
-    proxy_cache_key "$scheme$request_method$host$request_uri";
-    proxy_cache_convert_head on;
+    fastcgi_cache USERNAMEE;
+    fastcgi_ignore_headers Cache-Control Expires ;
+    fastcgi_cache_valid 200 14400s;
+    fastcgi_cache_valid 406 0s;
+    fastcgi_cache_valid 404 10s;
+    fastcgi_cache_valid 500 0;
+    fastcgi_cache_use_stale updating error timeout http_503;
+    fastcgi_cache_lock on;
+    fastcgi_cache_key "$scheme$request_method$host$request_uri";
 
     modsecurity_rules_file "/opt/sitewrangler/etc/modsec/sites/DOMAINNAMEE";
     index index.html index.htm index.php;
@@ -106,23 +102,33 @@ server {
     tcp_nodelay off;
     client_max_body_size 128M;
 
+    if ($http_cookie ~ "(_logged_in_|items_in_cart|jsid|comment_author)") {
+        set $cache_bypass 1;
+    }
+
     if ($request_uri ~ "^(/wp-admin|/administrator|/admin|/user|/wp-cron\.php|/.*login\.php|/opcache\.php|/xmlrpc\.php|.*/phpinfo\.php)") {
         set $cache_bypass 1;
     }
+
+    if ($request_method = POST) {
+        set $cache_bypass 1;
+    }
+
     location = /favicon.ico {
         log_not_found off;
         access_log off;
+        add_header Strict-Transport-Security "max-age=HSTSLENTHH; includeSubDomainsHSTSPRELOADD" always;
     }
 
     location = /robots.txt {
         allow all;
         log_not_found off;
         access_log off;
+        add_header Strict-Transport-Security "max-age=HSTSLENTHH; includeSubDomainsHSTSPRELOADD" always;
     }
 
     location / {
-        # This is cool because no php is touched for static content.
-        # include the "?$args" part so non-default permalinks doesn't break when using query string
+        # include the "?$args" part so non-default permalinks don't break when using query string
         add_header X-Proxy-Cache $upstream_cache_status;
         add_header Strict-Transport-Security "max-age=HSTSLENTHH; includeSubDomainsHSTSPRELOADD" always;
         try_files $uri $uri/ /index.php?$args;
@@ -133,6 +139,8 @@ server {
         add_header Strict-Transport-Security "max-age=HSTSLENTHH; includeSubDomainsHSTSPRELOADD" always;
         #NOTE: You should have "cgi.fix_pathinfo = 0;" in php.ini
         include fastcgi.conf;
+        fastcgi_no_cache $cache_bypass;
+        fastcgi_cache_bypass $cache_bypass;
         fastcgi_intercept_errors on;
         fastcgi_buffers 16 16k;
         fastcgi_buffer_size 32k;
@@ -144,12 +152,13 @@ server {
     }
 
     location ~* \.(js|css|png|jpg|jpeg|gif|ico)$ {
+        add_header Strict-Transport-Security "max-age=HSTSLENTHH; includeSubDomainsHSTSPRELOADD" always;
         expires max;
         log_not_found off;
     }
 
     location ~ ^/purge(/.*) {
-        proxy_cache_purge USERNAMEE "$scheme$request_method$host$1";
+        fastcgi_cache_purge USERNAMEE "$scheme$request_method$host$1";
     }
 }
 
@@ -162,13 +171,14 @@ server {
 
     ssl_certificate /etc/letsencrypt/live/DOMAINNAMEE/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/DOMAINNAMEE/privkey.pem;
-    add_header Strict-Transport-Security "max-age=HSTSLENTHH; includeSubDomainsHSTSPRELOADD" always;
 
     location ~ "^/(\.well-known\/|[A-Fa-f0-9]{32}.txt$)" {
         root HOMEDIRRpublic_html;
     }
 
     location / {
+        add_header Strict-Transport-Security "max-age=HSTSLENTHH; includeSubDomainsHSTSPRELOADD" always;
+
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header Host $http_host;

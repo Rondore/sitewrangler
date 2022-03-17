@@ -104,9 +104,18 @@ server {
     tcp_nodelay off;
     client_max_body_size 128M;
 
+    if ($http_cookie ~ "(_logged_in_|items_in_cart|jsid|comment_author)") {
+        set $cache_bypass 1;
+    }
+
     if ($request_uri ~ "^(/wp-admin|/administrator|/admin|/user|/wp-cron\.php|/.*login\.php|/opcache\.php|/xmlrpc\.php|.*/phpinfo\.php)") {
         set $cache_bypass 1;
     }
+
+    if ($request_method = POST) {
+        set $cache_bypass 1;
+    }
+    
     index index.php;
 
     location ~ "^/(\.well-known\/|[A-Fa-f0-9]{32}.txt$)" {
