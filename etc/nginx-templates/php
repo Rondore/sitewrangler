@@ -2,7 +2,7 @@
 # User     : USERNAMEE
 # Template : php
 
-proxy_cache_path /usr/local/nginx/cache/USERNAMEE levels=1 keys_zone=USERNAMEE:128m inactive=1h;
+fastcgi_cache_path /usr/local/nginx/cache/USERNAMEE levels=1 keys_zone=USERNAMEE:128m inactive=1h;
 
 limit_req_zone $binary_remote_addr zone=UNDERDOMAINN:1m rate=15r/m;
 
