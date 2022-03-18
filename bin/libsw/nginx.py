@@ -94,6 +94,18 @@ def template_path(name):
     return settings.get('install_path') + 'etc/nginx-templates/' + name
 
 def replace_template_line(line, needle, replacement, is_header=False):
+    """
+    Filter a line read from a template file replacing any instances of a variable name
+    with its value. While filtering a header line. Field names are only replaced after
+    the second colin to avoid replacing the first use of the name. This is to ensure
+    that both the name and values of these extra values can still be interpreted by code.
+
+    Args:
+        line - The line of text that needs to be filtered 
+        needle - The variable name that needs to be replaced
+        replacement - The value of the varable used to replace the name
+        is_header - True only if the line is part of the template header
+    """
     custom_field = False
     if is_header:
         if re.search('^# Field', line):
@@ -107,6 +119,80 @@ def replace_template_line(line, needle, replacement, is_header=False):
         line = line.replace(needle, replacement)
     return line
 
+def write_vhost_with_variables(open_template_file, open_vhost_file, variable_array):
+    """
+    Write a vhost file using a template to read from and an array of values to replace.
+
+    Args:
+        open_template_file - The already open template file from which to read 
+        open_vhost_file - The already open vhost file for writing
+        variable_array - Template values stored as [name, value] within a parent array
+    """
+    header = True
+    header_needle = re.compile('^#')
+    for line in open_template_file:
+        if header:
+            if header_needle.search(line) == None:
+                header = False
+        for key, value in variable_array:
+            line = replace_template_line(line, key, value, header)
+        open_vhost_file.write(line)
+
+def append_missing_variable(variable_array, key, value):
+    """
+    Add a value that is used for populating a vhost file if not already present.
+    Each value is stored as [name, value] within the parent array.
+
+    Args:
+        variable_array - The parrent array into which the value is added if missing
+        key - The name of the variable
+        value - The value of the variable
+    """
+    found = False
+    for ke, val in variable_array:
+        if key == ke:
+            found = True
+            break
+    if not found:
+        variable_array.append([key, value])
+    return variable_array
+
+def populate_default_vhost_variables(username, domain, existing_fields=[]):
+    """
+    Add any missing standard values that are used for populating a vhost file.
+    Each value is stored as [name, value] within the parent array.
+
+    Args:
+        username - The system user assiciated with the website
+        domain - The domain name assiciated with the website without www
+        existing_fields - The parrent array into which any missing values are added
+    """
+    modsec = get_modsec_path(domain)
+    home = user.home_dir(username)
+    dash_domain = domain.replace('.', '-', 100)
+    under_domain = domain.replace('.', '_', 100)
+    local_ip = settings.get('local_ip')
+    public_ip = settings.get('public_ip')
+    ip6 = settings.get('ip6')
+    if not ip6 or ip6 == 'False':
+        ip6 = '::'
+    if not os.path.exists(modsec_exception_dir):
+        os.makedirs(modsec_exception_dir)
+    if not os.path.exists(vhost_dir):
+        os.makedirs(vhost_dir)
+    with open(modsec, 'a+'):
+        pass
+    existing_fields = append_missing_variable(existing_fields, 'DOMAINNAMEE', domain)
+    existing_fields = append_missing_variable(existing_fields, 'USERNAMEE', username)
+    existing_fields = append_missing_variable(existing_fields, 'DASHDOMAINN', dash_domain)
+    existing_fields = append_missing_variable(existing_fields, 'UNDERDOMAINN', under_domain)
+    existing_fields = append_missing_variable(existing_fields, 'HOMEDIRR', home)
+    existing_fields = append_missing_variable(existing_fields, 'LOCALIPP', local_ip)
+    existing_fields = append_missing_variable(existing_fields, 'PUBLICIPP', public_ip)
+    existing_fields = append_missing_variable(existing_fields, 'IPV66', ip6)
+    existing_fields = append_missing_variable(existing_fields, 'MODSECC', modsec)
+    return existing_fields
+
 def make_vhost(username, domain, template_name='php', template_fields=False):
     """
     Create a new vhost file for a given domain.
@@ -116,49 +202,19 @@ def make_vhost(username, domain, template_name='php', template_fields=False):
         domain - The domain associated with the new vhost file
         template_name - The name of the nginx vhost template to use
     """
-    modsec = get_modsec_path(domain)
-    home = user.home_dir(username)
-    dash_domain = domain.replace('.', '-', 100)
-    under_domain = domain.replace('.', '_', 100)
-    vhost_path = get_vhost_path(domain)
-    local_ip = settings.get('local_ip')
-    public_ip = settings.get('public_ip')
-    ip6 = settings.get('ip6')
-    if not ip6 or ip6 == 'False':
-        ip6 = '::'
     read_path = template_path(template_name)
-    fields = get_vhost_headers(read_path)[0]
+    vhost_path = get_vhost_path(domain)
+    
     if not template_fields:
+        fields = get_vhost_headers(read_path)[0]
         template_fields = []
         for key, value in fields:
             value = input_util.prompt_value(key, value)
             template_fields.append([key, value])
-    if not os.path.exists(modsec_exception_dir):
-        os.makedirs(modsec_exception_dir)
-    if not os.path.exists(vhost_dir):
-        os.makedirs(vhost_dir)
-    with open(modsec, 'a+'):
-        pass
+        template_fields = populate_default_vhost_variables(username, domain, template_fields)
     with open(read_path) as template:
         with open(vhost_path, 'w') as host:
-            header = True
-            header_needle = re.compile('^#')
-            for line in template:
-                if header:
-                    if header_needle.search(line) == None:
-                        header = False
-                line = replace_template_line(line, 'DOMAINNAMEE', domain, header)
-                line = replace_template_line(line, 'USERNAMEE', username, header)
-                line = replace_template_line(line, 'DASHDOMAINN', dash_domain, header)
-                line = replace_template_line(line, 'UNDERDOMAINN', under_domain, header)
-                line = replace_template_line(line, 'HOMEDIRR', home, header)
-                line = replace_template_line(line, 'LOCALIPP', local_ip, header)
-                line = replace_template_line(line, 'PUBLICIPP', public_ip, header)
-                line = replace_template_line(line, 'IPV66', ip6, header)
-                line = replace_template_line(line, 'MODSECC', modsec, header)
-                for key, value in template_fields:
-                    line = replace_template_line(line, key, value, header)
-                host.write(line)
+            write_vhost_with_variables(template, host, template_fields)
     print('Created ' + vhost_path)
     reload()
 
@@ -176,6 +232,13 @@ def edit_vhost(domain):
         reload()
 
 def get_vhost_headers(file_path):
+    """
+    Get an array of values stored in a vhost header. Each value is stored as
+    [name, value] within the parent array.
+
+    Args:
+        file_path - An array of header values
+    """
     username = ''
     domain = ''
     template = ''
@@ -216,19 +279,8 @@ def add_ssl_to_site_hosts(domain):
         domain - The domain associated with the nginx vhost file
     """
     full_file = get_vhost_path(domain)
-    local_ip = settings.get('local_ip')
-    public_ip = settings.get('public_ip')
-    ip6 = settings.get('ip6')
-    if not ip6 or ip6 == 'False':
-        ip6 = '::'
-    modsec = get_modsec_path(domain)
     fields, username, domain, template = get_vhost_headers(full_file)
-    dash_domain = domain.replace('.', '-')
-    under_domain = domain.replace('.', '_')
-    field_needle = re.compile('^# Field')
-    field_header_extract = re.compile('(.*:\s*)(\S+)(\s*:\s*)(.*)')
-
-    home = user.home_dir(username)
+    fields = populate_default_vhost_variables(username, domain, fields)
 
     if not (template.endswith('-ssl') or template.endswith('-hsts')):
         template += '-ssl'
@@ -240,34 +292,7 @@ def add_ssl_to_site_hosts(domain):
 
     with open(template_path) as template_file:
         with open(full_file, 'w') as vhost:
-            for line in template_file:
-                if field_needle.search(line) != None:
-                    field_fiedles = field_header_extract.search(line)
-                    key = field_fiedles.group(2)
-                    value = ''
-                    for entry in fields:
-                        if key == entry[0]:
-                            value = entry[1]
-                            break
-                    line = field_fiedles.group(1) + \
-                        key + \
-                        field_fiedles.group(3) + \
-                        value
-                else:
-                    line = line.replace('DOMAINNAMEE', domain, 100)
-                    line = line.replace('USERNAMEE', username, 100)
-                    line = line.replace('DASHDOMAINN', dash_domain, 100)
-                    line = line.replace('UNDERDOMAINN', under_domain, 100)
-                    line = line.replace('HOMEDIRR', home, 10000)
-                    line = line.replace('LOCALIPP', local_ip, 10000)
-                    line = line.replace('PUBLICIPP', public_ip, 10000)
-                    line = line.replace('IPV66', ip6, 10000)
-                    line = line.replace('MODSECC', modsec, 10000)
-                    for field in fields:
-                        key, value = field
-                        line = line.replace(key, value, 100)
-                    vhost.write(line)
-
+            write_vhost_with_variables(template_file, vhost, fields)
     reload()
     print('Updated ' + full_file)
     return True
