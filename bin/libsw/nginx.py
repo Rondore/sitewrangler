@@ -93,6 +93,20 @@ def template_path(name):
     """
     return settings.get('install_path') + 'etc/nginx-templates/' + name
 
+def replace_template_line(line, needle, replacement, is_header=False):
+    custom_field = False
+    if is_header:
+        if re.search('^# Field', line):
+            first_colin = line.find(":")
+            if first_colin != -1:
+                second_colin = line.find(":", first_colin + 1)
+                if second_colin != -1:
+                    line = line[0:second_colin] + line[second_colin:].replace(needle, replacement)
+                    custom_field = True
+    if not custom_field:
+        line = line.replace(needle, replacement)
+    return line
+
 def make_vhost(username, domain, template_name='php', template_fields=False):
     """
     Create a new vhost file for a given domain.
@@ -127,18 +141,23 @@ def make_vhost(username, domain, template_name='php', template_fields=False):
         pass
     with open(read_path) as template:
         with open(vhost_path, 'w') as host:
+            header = True
+            header_needle = re.compile('^#')
             for line in template:
-                line = line.replace('DOMAINNAMEE', domain, 10000)
-                line = line.replace('USERNAMEE', username, 10000)
-                line = line.replace('DASHDOMAINN', dash_domain, 10000)
-                line = line.replace('UNDERDOMAINN', under_domain, 10000)
-                line = line.replace('HOMEDIRR', home, 10000)
-                line = line.replace('LOCALIPP', local_ip, 10000)
-                line = line.replace('PUBLICIPP', public_ip, 10000)
-                line = line.replace('IPV66', ip6, 10000)
-                line = line.replace('MODSECC', modsec, 10000)
+                if header:
+                    if header_needle.search(line) == None:
+                        header = False
+                line = replace_template_line(line, 'DOMAINNAMEE', domain, header)
+                line = replace_template_line(line, 'USERNAMEE', username, header)
+                line = replace_template_line(line, 'DASHDOMAINN', dash_domain, header)
+                line = replace_template_line(line, 'UNDERDOMAINN', under_domain, header)
+                line = replace_template_line(line, 'HOMEDIRR', home, header)
+                line = replace_template_line(line, 'LOCALIPP', local_ip, header)
+                line = replace_template_line(line, 'PUBLICIPP', public_ip, header)
+                line = replace_template_line(line, 'IPV66', ip6, header)
+                line = replace_template_line(line, 'MODSECC', modsec, header)
                 for key, value in template_fields:
-                    line = line.replace(key, value, 10000)
+                    line = replace_template_line(line, key, value, header)
                 host.write(line)
     print('Created ' + vhost_path)
     reload()
