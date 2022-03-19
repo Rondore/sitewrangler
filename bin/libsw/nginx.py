@@ -297,6 +297,32 @@ def add_ssl_to_site_hosts(domain):
     print('Updated ' + full_file)
     return True
 
+
+def retemplate_vhost(domain):
+    """
+    Reapply an nginx vhost template to a website's vhost file. This is most useful
+    when a template has been updated and that update needs to be applied to the
+    given website.
+
+    Args:
+        domain - The domain associated with the nginx vhost file
+    """
+    full_file = get_vhost_path(domain)
+    fields, username, domain, template = get_vhost_headers(full_file)
+    fields = populate_default_vhost_variables(username, domain, fields)
+    template_path = settings.get('install_path') + 'etc/nginx-templates/' + template
+
+    if not os.path.exists(template_path):
+        print('Unable to find template: ' + template)
+        return False
+
+    with open(template_path) as template_file:
+        with open(full_file, 'w') as vhost:
+            write_vhost_with_variables(template_file, vhost, fields)
+    reload()
+    print('Updated ' + full_file)
+    return True
+
 def enabled_sites():
     """
     Get an array of all domains with enabled vhost files.

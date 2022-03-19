@@ -9,6 +9,7 @@ def _help():
     print('sw nginx enable [example.com]  # Enable an nginx vhost')
     print('sw nginx disable [example.com]  # Disable an nginx vhost')
     print('sw nginx edit [example.com]  # Edit an nginx vhost and reload the nginx configuration upon exit')
+    print('sw nginx retemplate [example.com]  # Reapply an nginx vhost template to a website\'s vhost file')
     print('sw nginx (delete|remove) [example.com]  # Delete an nginx vhost')
     print('sw nginx bypass[modsec] [example.com [0000]]  # Bypass a ModSecurity rule id')
     print('sw nginx unbypass[modsec] [example.com [0000]]  # Remove a bypass for a ModSecurity rule id')
@@ -57,6 +58,13 @@ def _add(domain, more):
     nginx.make_vhost(username, domain, template)
 index.register_command('add', _add)
 index.register_command('create', _add)
+
+def _retemplate(domain):
+    from libsw import nginx
+    if domain == False:
+        domain = nginx.select_conf('Select domain to retemplate')
+    nginx.retemplate_vhost(domain)
+index.register_command('retemplate', _retemplate)
 
 def _remove(domain):
     from libsw import nginx
