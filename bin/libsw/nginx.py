@@ -71,8 +71,16 @@ def template_list(hide_ssl=False):
     templates = []
     folder_name = settings.get('install_path') + 'etc/nginx-templates/'
     for temp in glob.glob(folder_name + '*'):
-        if not hide_ssl or not temp.endswith('-ssl'):
+        is_ssl = temp.endswith('-ssl') or temp.endswith('-hsts')
+        if not hide_ssl or not is_ssl:
             templates.append(temp[len(folder_name):])
+    custom_folder_name = folder_name + 'custom/'
+    for temp in glob.glob(custom_folder_name + '*'):
+        is_ssl = temp.endswith('-ssl') or temp.endswith('-hsts')
+        if not hide_ssl or not is_ssl:
+            name = temp[len(folder_name):]
+            if name not in templates:
+                templates.append(name)
     return sorted(templates)
 
 def is_template(name):
@@ -91,6 +99,10 @@ def template_path(name):
     Args:
         name - The name (slug) of the template
     """
+    folder_name = settings.get('install_path') + 'etc/nginx-templates/'
+    custom_folder_name = folder_name + 'custom/'
+    if os.path.exists(custom_folder_name + name):
+        return custom_folder_name + name
     return settings.get('install_path') + 'etc/nginx-templates/' + name
 
 def replace_template_line(line, needle, replacement, is_header=False):
@@ -284,7 +296,7 @@ def add_ssl_to_site_hosts(domain):
 
     if not (template.endswith('-ssl') or template.endswith('-hsts')):
         template += '-ssl'
-    template_path = settings.get('install_path') + 'etc/nginx-templates/' + template
+    template_path = template_path(template)
 
     if not os.path.exists(template_path):
         print('Unable to find template: ' + template)
@@ -310,7 +322,7 @@ def retemplate_vhost(domain):
     full_file = get_vhost_path(domain)
     fields, username, domain, template = get_vhost_headers(full_file)
     fields = populate_default_vhost_variables(username, domain, fields)
-    template_path = settings.get('install_path') + 'etc/nginx-templates/' + template
+    template_path = template_path(template)
 
     if not os.path.exists(template_path):
         print('Unable to find template: ' + template)
