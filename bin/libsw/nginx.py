@@ -90,9 +90,9 @@ def is_template(name):
     Args:
         name - The template filename to test
     """
-    return os.path.exists(template_path(name))
+    return os.path.exists(get_template_path(name))
 
-def template_path(name):
+def get_template_path(name):
     """
     Get the full path for a given nginx vhost template name.
 
@@ -214,7 +214,7 @@ def make_vhost(username, domain, template_name='php', template_fields=False):
         domain - The domain associated with the new vhost file
         template_name - The name of the nginx vhost template to use
     """
-    read_path = template_path(template_name)
+    read_path = get_template_path(template_name)
     vhost_path = get_vhost_path(domain)
     
     if not template_fields:
@@ -296,7 +296,7 @@ def add_ssl_to_site_hosts(domain):
 
     if not (template.endswith('-ssl') or template.endswith('-hsts')):
         template += '-ssl'
-    template_path = template_path(template)
+    template_path = get_template_path(template)
 
     if not os.path.exists(template_path):
         print('Unable to find template: ' + template)
@@ -322,7 +322,7 @@ def retemplate_vhost(domain):
     full_file = get_vhost_path(domain)
     fields, username, domain, template = get_vhost_headers(full_file)
     fields = populate_default_vhost_variables(username, domain, fields)
-    template_path = template_path(template)
+    template_path = get_template_path(template)
 
     if not os.path.exists(template_path):
         print('Unable to find template: ' + template)
