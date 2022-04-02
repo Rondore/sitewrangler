@@ -9,7 +9,7 @@ import glob
 import re
 import shutil
 import platform
-from libsw import logger, version, email, settings, file_filter
+from libsw import logger, version, email, settings, file_filter, system
 from abc import ABC, abstractmethod
 
 debug = True
@@ -623,48 +623,6 @@ class AbstractGitBuilder(AbstractBuilder):
         if success:
             success = self.check_build()
         return success, logfile
-
-def get_distro():
-    """
-    Get the name of the OS distrobution of the installed system.
-    """
-    os_name = platform.system()
-    if os_name == 'Linux':
-        distro = subprocess.getoutput("cat /etc/*release | grep '^ID=' | head -1")[3:].strip()
-        if ( distro.startswith('"') and distro.endswith('"') ) or \
-                ( distro.startswith("'") and distro.endswith("'") ):
-            distro = distro[1:-1]
-        return distro
-    elif os_name == 'Darwin':
-        return 'macos'
-    elif os_name.startswith('CYGWIN'):
-        return 'cygwin'
-    elif os_name.startswith('MINGW'):
-        return 'mingw'
-    elif os_name == 'FreeBSD':
-        return 'FreeBSD'
-    return os_name
-
-def get_distro_version():
-    """
-    Get the major OS version of the host system.
-    """
-    os_name = platform.system()
-    if os_name == 'Linux':
-        distro = subprocess.getoutput("cat /etc/*release | grep '^VERSION_ID=' | head -1")[11:].strip()
-        if ( distro.startswith('"') and distro.endswith('"') ) or \
-                ( distro.startswith("'") and distro.endswith("'") ):
-            distro = distro[1:-1]
-        return distro
-    elif os_name == 'Darwin':
-        return ''
-    elif os_name.startswith('CYGWIN'):
-        return ''
-    elif os_name.startswith('MINGW'):
-        return ''
-    elif os_name =='FreeBSD':
-        return ''
-    return False
 
 def builder_array_contains_slug(array, slug):
     for builder in array:

@@ -13,7 +13,7 @@ import shutil
 import pwd
 import time
 from shutil import copyfile
-from libsw import logger, curl, file_filter, version, builder, settings, service, user, input_util, pecl
+from libsw import logger, curl, file_filter, version, builder, settings, service, system, user, input_util, pecl
 
 # enable_legacy_versions = settings.get_bool('enable_php_legacy_versions')
 php73version = '7.3.33' # 19 Nov 2021
@@ -672,13 +672,13 @@ def detect_distro_code():
     Attempt to determin the code that corresponds to the system's operating
     system to be used in building uw-imap.
     """
-    distro_name = builder.get_distro()
+    distro_name = system.get_distro()
     if ( distro_name == 'debian' or
             distro_name == 'ubuntu' ):
         return 'ldb'
     elif ( distro_name == 'centos' or
             distro_name == 'rhel' ):
-        # version = int(builder.get_distro_version())
+        # version = int(system.get_distro_version())
         # if version >= 7:
         #     return 'lrh'
         # elif version >= 5:
