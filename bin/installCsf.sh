@@ -65,7 +65,7 @@ sed -Ei 's~^([ \s]*)CUSTOM1_LOG[ \s]*=.*~\1CUSTOM1_LOG = "/var/log/exim4/rejectl
 
 sed -Ei 's~^([ \s]*)CUSTOM2_LOG[ \s]*=.*~\1CUSTOM2_LOG = "/usr/local/nginx/logs/error.log"~' /etc/csf/csf.conf
 
-sed -Ei 's~^([ \s]*)CUSTOM3_LOG[ \s]*=.*~\1CUSTOM3_LOG = "/var/local/nginx/logs/access.log"~' /etc/csf/csf.conf
+sed -Ei 's~^([ \s]*)CUSTOM3_LOG[ \s]*=.*~\1CUSTOM3_LOG = "/usr/local/nginx/logs/access.log"~' /etc/csf/csf.conf
 
 echo "Enter the two-letter country code(s) you would like to have access \
 to reading and sending email. See this link for codes: \
