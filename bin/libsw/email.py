@@ -168,7 +168,14 @@ def send_admin_message(subject, message_content):
         subject - The subject line for the email
         message_content - The body of the email message
     """
-    message = MIMEText(message_content)
+    line_limit = 900
+    clean_output = ""
+    for line in message_content.splitlines():
+        while len(line) > line_limit:
+            clean_output += line[:line_limit - 5] + '[...]\n'
+            line = line[line_limit - 5:]
+        clean_output += line + '\n'
+    message = MIMEText(clean_output)
     message["From"] = system_from_addr()
     message["To"] = settings.get('system_admin_email')
     message["Subject"] = subject
