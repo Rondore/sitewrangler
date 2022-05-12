@@ -36,15 +36,22 @@ def _add(domain, more):
         cert.create_std_le_certs(domain, sys_user)
     if email.is_domain(domain):
         cert.deploy_exim_domain(domain)
+        cert.update_dovecot_ssl()
+        email.reload_exim()
 index.register_command('add', _add)
 index.register_command('create', _add)
 
 def _deployexim(domain):
-    from libsw import cert
+    from libsw import cert, email
+    count = 0
     if domain == False:
-        cert.deploy_all_exim_domains()
+        count = cert.deploy_all_exim_domains()
     else:
-        cert.deploy_exim_domain(domain)
+        if cert.deploy_exim_domain(domain):
+            count = 1
+    if count > 0:
+        email.reload_dovecot()
+        email.reload_exim()
 index.register_command('deployexim', _deployexim)
 
 def _deploylocal(domain):
