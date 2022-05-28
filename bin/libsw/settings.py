@@ -170,5 +170,5 @@ def _get_default_settings():
 
         'compact_help': False,
 
-        'swap_size': 1610612736 # 1610612736 = 1.5Gig
+        'swap_size': '1.5G'
     }
