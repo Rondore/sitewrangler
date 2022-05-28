@@ -168,5 +168,7 @@ def _get_default_settings():
         'enable_php_prerelease_version': False,
         'debug_build_queue': False,
 
-        'compact_help': False
+        'compact_help': False,
+
+        'swap_size': 1610612736 # 1610612736 = 1.5Gig
     }
