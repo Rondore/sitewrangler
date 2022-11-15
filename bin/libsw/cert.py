@@ -419,7 +419,7 @@ def get_certificate_names(domain):
             main_domain = line.split(':')[1].strip().lower()
             eq_index = main_domain.find('=')
             if eq_index != -1:
-                main_domain = main_domain[eq_index+1:]
+                main_domain = main_domain[eq_index+1:].strip()
             if main_domain not in valid_names:
                 valid_names.append(main_domain)
         elif alternate_re.match(line):
