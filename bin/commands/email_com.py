@@ -173,11 +173,12 @@ def _setdomain(domain, more):
 index.register_command('setdomain', _setdomain, autocomplete=_setdomain_autocomplete)
 
 def _unsetdomain(domain):
-    from libsw import email
+    from libsw import email, cert
     if domain == False:
         domain = email.select_domain()
     email.RemoveMailDomain(domain).run()
-    #TODO delete cert from exim
+    cert.deploy_exim_domain(domain)
+    cert.update_dovecot_ssl()
 index.register_command('unsetdomain', _unsetdomain, autocomplete=_domain_autocomplete)
 
 def _validate_domain_or_email(domain, domain_vs_email_string):
