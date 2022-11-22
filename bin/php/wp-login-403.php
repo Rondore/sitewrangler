@@ -14,3 +14,8 @@
 add_action( 'wp_login_failed', function () {
     status_header(403);
 } );
+
+add_action( 'xmlrpc_login_error', function () {
+    status_header(403);
+} );
+
