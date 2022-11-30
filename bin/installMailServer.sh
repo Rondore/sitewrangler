@@ -628,7 +628,7 @@ if [ -z "$(egrep '^\s*add_header = X-Spam-status.*$' $config_check_data)" ]; the
     -e "${line}i\\    spam = Debian-exim:true" \
     -e "${line}i\\    add_header = X-Spam-status: \${if >{\$spam_score_int}{50}{Yes}{No}}\\\\n\\\\" \
     -e "${line}i\\              X-Spam-score: \$spam_score\\\\n\\\\" \
-    -e "${line}i\\              X-Spam-score_int: \$spam_score_int\\\\n\\\\" \
+    -e "${line}i\\              X-Spam-score-int: \$spam_score_int\\\\n\\\\" \
     -e "${line}i\\              X-Spam-bar: \$spam_bar\\\\n\\\\" \
     -e "${line}i\\              X-Spam-report: \$spam_report" "$config_check_data"
 fi
