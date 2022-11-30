@@ -103,7 +103,7 @@ cat > /etc/exim4/conf.d/router/320_exim4-config_spamassassin << 'THEEND'
 
 virtual_domain_spam:
   driver = accept
-  condition = ${if eq{$h_X-Spam_Status:}{Yes}{true}{false}}
+  condition = ${if eq{$h_X-Spam-Status:}{Yes}{true}{false}}
   require_files = "+/home/${lookup{$domain}lsearch{/etc/maildomains}{$value}}/etc/$domain/enable_spamassassin:+/home/${lookup{$domain}lsearch{/etc/maildomains}{$value}}/mail/$domain/$local_part/"
   transport = dovecot_spam_transport
 
@@ -119,7 +119,7 @@ cat > /etc/exim4/conf.d/router/321_exim4-config_spamassassin_user << 'THEEND'
 
 virtual_user_spam:
   driver = accept
-  condition = ${if eq{$h_X-Spam_Status:}{Yes}{true}{false}}
+  condition = ${if eq{$h_X-Spam-Status:}{Yes}{true}{false}}
   require_files = "+/home/${lookup{$domain}lsearch{/etc/maildomains}{$value}}/etc/$domain/$local_part/enable_spamassassin:+/home/${lookup{$domain}lsearch{/etc/maildomains}{$value}}/mail/$domain/$local_part/"
   transport = dovecot_spam_transport
 
@@ -621,16 +621,16 @@ sed -Ei 's/^(#\s*)?spamd_address =.*$/spamd_address = 127.0.0.1 783/' /etc/exim4
 #echo 'Stage 6F'
 
 config_check_data="/etc/exim4/conf.d/acl/40_exim4-config_check_data"
-if [ -z "$(egrep '^\s*add_header = X-Spam_status.*$' $config_check_data)" ]; then
+if [ -z "$(egrep '^\s*add_header = X-Spam-status.*$' $config_check_data)" ]; then
   line=$(egrep -n 'X-Spam' $config_check_data | tail -1 | cut -f1 -d:)
   let 'line+=1'
   sed -i -e "${line}i\\  warn" \
     -e "${line}i\\    spam = Debian-exim:true" \
-    -e "${line}i\\    add_header = X-Spam_status: \${if >{\$spam_score_int}{50}{Yes}{No}}\\\\n\\\\" \
-    -e "${line}i\\              X-Spam_score: \$spam_score\\\\n\\\\" \
-    -e "${line}i\\              X-Spam_score_int: \$spam_score_int\\\\n\\\\" \
-    -e "${line}i\\              X-Spam_bar: \$spam_bar\\\\n\\\\" \
-    -e "${line}i\\              X-Spam_report: \$spam_report" "$config_check_data"
+    -e "${line}i\\    add_header = X-Spam-status: \${if >{\$spam_score_int}{50}{Yes}{No}}\\\\n\\\\" \
+    -e "${line}i\\              X-Spam-score: \$spam_score\\\\n\\\\" \
+    -e "${line}i\\              X-Spam-score_int: \$spam_score_int\\\\n\\\\" \
+    -e "${line}i\\              X-Spam-bar: \$spam_bar\\\\n\\\\" \
+    -e "${line}i\\              X-Spam-report: \$spam_report" "$config_check_data"
 fi
 
 #echo 'Stage 6G'
