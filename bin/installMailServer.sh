@@ -36,14 +36,16 @@ if [ -e /usr/bin/apt-get ]; then
   exim="exim4"
   /usr/bin/apt-get install -y bind9 dovecot-core dovecot-imapd python3-pip screen certbot letsencrypt exim4 exim4-daemon-heavy spamassassin sysstat
 elif [ -e /usr/bin/dnf ]; then
-  # Fedora / CentOS 8
-  /usr/bin/dnf install -y bind dovecot-core dovecot-imapd python3-pip certbot letsencrypt exim exim4-daemon-heavy spamassassin platform-python-devel
+  # Fedora / RHEL
+  /usr/bin/dnf install -y epel-release
+  /usr/bin/crb enable
+  /usr/bin/dnf install -y bind dovecot-core dovecot-imapd python3 python3-pip certbot letsencrypt exim exim4-daemon-heavy spamassassin platform-python-devel sysstat
   # screen
 elif [ -e /usr/bin/yum ]; then
   # CentOS 7
   /usr/bin/yum install epel-release -y
   /usr/bin/yum update -y
-  /usr/bin/yum install -y bind dovecot python36 python36-pip screen certbot exim spamassassin
+  /usr/bin/yum install -y bind dovecot python36 python36-pip screen certbot exim spamassassin sysstat
   # exim4-daemon-heavy dovecot-imapd letsencrypt
 elif [ -e /usr/sbin/pkg ]; then
   # FreeBSD
