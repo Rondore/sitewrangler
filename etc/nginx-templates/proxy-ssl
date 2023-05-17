@@ -116,8 +116,6 @@ server {
         set $cache_bypass 1;
     }
     
-    index index.php;
-
     location ~ "^/(\.well-known\/|[A-Fa-f0-9]{32}.txt$)" {
         root HOMEDIRRpublic_html;
     }
@@ -135,7 +133,6 @@ server {
         proxy_ssl_session_reuse on;
         proxy_ssl_name $http_host;
         proxy_ssl_server_name on;
-        proxy_set_header Host $http_host;
         proxy_pass https://PROXYIPP:PROXYPORTT;
     }
 
