@@ -34,26 +34,26 @@ if [ -e /usr/bin/apt-get ]; then
     done
   fi
   exim="exim4"
-  /usr/bin/apt-get install -y bind9 dovecot-core dovecot-imapd python3-pip screen certbot letsencrypt exim4 exim4-daemon-heavy spamassassin sysstat
+  /usr/bin/apt-get install -y bind9 dovecot-core dovecot-imapd python3-pip screen certbot letsencrypt exim4 exim4-daemon-heavy spamassassin sysstat logrotate
 elif [ -e /usr/bin/dnf ]; then
   # Fedora / RHEL
   /usr/bin/dnf install -y epel-release
   /usr/bin/crb enable
-  /usr/bin/dnf install -y bind dovecot-core dovecot-imapd python3 python3-pip certbot letsencrypt exim exim4-daemon-heavy spamassassin platform-python-devel sysstat
+  /usr/bin/dnf install -y bind dovecot-core dovecot-imapd python3 python3-pip certbot letsencrypt exim exim4-daemon-heavy spamassassin platform-python-devel sysstat logrotate
   # screen
 elif [ -e /usr/bin/yum ]; then
   # CentOS 7
   /usr/bin/yum install epel-release -y
   /usr/bin/yum update -y
-  /usr/bin/yum install -y bind dovecot python36 python36-pip screen certbot exim spamassassin sysstat
+  /usr/bin/yum install -y bind dovecot python36 python36-pip screen certbot exim spamassassin sysstat logrotate
   # exim4-daemon-heavy dovecot-imapd letsencrypt
 elif [ -e /usr/sbin/pkg ]; then
   # FreeBSD
   if [ "$(echo "$release" | grep '^ID=')" == "ID=solaris" ]; then
     pip="pip-3.5"
-    /usr/sbin/pkg install -y python36 pip-35 pkg://solaris/service/network/dns/bind screen exim dovecot logrotate ca_root_nss
+    /usr/sbin/pkg install -y python36 pip-35 pkg://solaris/service/network/dns/bind screen exim dovecot logrotate ca_root_nss logrotate
   else
-    /usr/sbin/pkg install -y python36 py36-pip bind914 screen exim dovecot logrotate ca_root_nss
+    /usr/sbin/pkg install -y python36 py36-pip bind914 screen exim dovecot logrotate ca_root_nss logrotate
   fi
   # MAYBE: rndc-confgen -a
   ln -s /usr/local/bin/pip-3.6 /usr/local/bin/pip3
