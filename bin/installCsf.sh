@@ -13,13 +13,13 @@ cd "$old_pwd"
 
 if [ -e /usr/bin/apt-get ]; then
   # Debian/Ubuntu
-  /usr/bin/apt-get install -y libwww-perl unzip
+  /usr/bin/apt-get install -y libwww-perl unzip iptables
 elif [ -e /usr/bin/dnf ]; then
   # Fedora / CentOS 8
-  /usr/bin/dnf install -y perl-libwww-perl net-tools perl-LWP-Protocol-https unzip
+  /usr/bin/dnf install -y perl-libwww-perl net-tools perl-LWP-Protocol-https unzip iptables
 elif [ -e /usr/bin/yum ]; then
   # CentOS 7
-  /usr/bin/yum install perl-libwww-perl net-tools perl-LWP-Protocol-https unzip -y
+  /usr/bin/yum install perl-libwww-perl net-tools perl-LWP-Protocol-https unzip iptables -y
 #elif [ -e /usr/sbin/pkg ]; then
   # FreeBSD / Solaris
   # TODO install perl dependencies for csf
