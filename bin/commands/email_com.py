@@ -10,6 +10,7 @@ def _help():
     print('sw email checkpass[word] [user@example.com]  # Check an email account password')
     print('sw email setdomain [example.com [example_username]]  # Associate a domain with a system account in the email system')
     print('sw email unsetdomain [example.com]  # Remove a domain from the email system')
+    print('sw email getuser [example.com]  # Print the system account associated with a domain in the email system')
     print('sw email (delete|remove) [user@example.com [`dropfiles`]]  # Delete an email account and optionally it\'s files')
     print('sw email dkim [example.com]  # Generates a new dkim pair and installs them')
     print('sw email sastatus [[user@]example.com]  # Check if SpamAssassin is enabled for a domain or email address')
@@ -312,6 +313,13 @@ def _listusers():
         print('No accounts are registered for email')
 index.register_command('listuser', _listusers)
 index.register_command('listusers', _listusers)
+
+def _get_user(domain):
+    from libsw import email
+    account = email.get_account_from_domain(domain)
+    if account:
+        print(account)
+index.register_command('getuser', _get_user)
 
 def _status(subversion):
     from libsw import email
