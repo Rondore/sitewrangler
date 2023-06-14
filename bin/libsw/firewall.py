@@ -181,6 +181,7 @@ exe:/usr/lib/dovecot/anvil
 exe:/usr/lib/dovecot/imap
 exe:/usr/lib/dovecot/imap-login
 exe:/usr/lib/dovecot/auth
+exe:/usr/lib/dovecot/stats
 exe:/usr/sbin/atd
 exe:/usr/sbin/rsyslogd
 exe:/usr/lib/openssh/sftp-server
