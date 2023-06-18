@@ -10,4 +10,4 @@ class ImagickBuilder(pecl.PeclBuilder):
         return ['image-magick']
 
     def get_php_build_arg(self):
-        return '--with-imagick'
+        return '--with-imagick=/usr/local/src/ImageMagick/'
