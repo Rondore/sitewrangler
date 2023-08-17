@@ -453,16 +453,16 @@ def user_from_domain(domain):
         domain - The domain used in finding the system user
     """
     vhost = get_vhost_path(domain)
-    line_match = re.compile('^[ \s]*root')
-    line_extract = re.compile('.*/home/([^/]*)/.*')
+    header_match = re.compile('^#')
+    line_match = re.compile('^#\s*User\s*:')
     if os.path.exists(vhost):
         with open(vhost) as v:
             for line in v:
+                if header_match.match(line) == None:
+                    break
                 match = line_match.match(line)
                 if match != None:
-                    extract = line_extract.sub(r'\1', line)
-                    if len(extract) > 0:
-                        return extract.strip()
+                    return line.split(':')[1].strip()
     return False
 
 def docroot_from_domain(domain):
