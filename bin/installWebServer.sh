@@ -19,7 +19,7 @@ if [ -e /usr/bin/apt-get ]; then
     done
   fi
 
-  /usr/bin/apt-get install -y gcc make automake autoconf wget git bind9 screen build-essential libfcgi-dev libxml2-dev libbz2-dev libjpeg-dev libpng-dev libfreetype6-dev libpq-dev libxslt1-dev libzip-dev python3-pip libreadline-dev libtool certbot letsencrypt libkrb5-dev libpam0g-dev libmemcached-dev pkg-config mariadb-client mariadb-server libpcre3-dev libsqlite3-dev libonig-dev sysstat clamav clamav-daemon libgd-dev webp libwebp-dev libheif-dev
+  /usr/bin/apt-get install -y gcc make automake autoconf wget git bind9 screen build-essential libfcgi-dev libxml2-dev libbz2-dev libjpeg-dev libpng-dev libfreetype6-dev libpq-dev libxslt1-dev libzip-dev python3-pip libreadline-dev libtool certbot letsencrypt libkrb5-dev libpam0g-dev libmemcached-dev pkg-config mariadb-client mariadb-server libpcre3-dev libsqlite3-dev libonig-dev sysstat clamav clamav-daemon libgd-dev webp libwebp-dev libheif-dev libpsl-dev
   # for php 7.4 libsqlite3-dev libonig-dev
 
   release=$(cat /etc/*release)
@@ -40,13 +40,13 @@ elif [ -e /usr/bin/dnf ]; then
   # Fedora / RHEL
   /usr/bin/dnf install -y epel-release
   /usr/bin/crb enable
-  /usr/bin/dnf install -y gcc gcc-c++ make automake autoconf wget git bind python3 python3-pip libxml2-devel libzip-devel libpng-devel libxslt-devel libjpeg-turbo-devel libpq-devel libtool pcre pcre-devel krb5-devel pam-devel libmemcached-libs autoconf mariadb mariadb-server pkgconf-pkg-config readline-devel clamd clamav-update clamav sqlite-devel bzip2-devel oniguruma-devel platform-python-devel sysstat perl-FindBin perl-IPC-Cmd logrotate
+  /usr/bin/dnf install -y gcc gcc-c++ make automake autoconf wget git bind python3 python3-pip libxml2-devel libzip-devel libpng-devel libxslt-devel libjpeg-turbo-devel libpq-devel libtool pcre pcre-devel krb5-devel pam-devel libmemcached-libs autoconf mariadb mariadb-server pkgconf-pkg-config readline-devel clamd clamav-update clamav sqlite-devel bzip2-devel oniguruma-devel platform-python-devel sysstat perl-FindBin perl-IPC-Cmd logrotate libpsl-devel
   # libfcgi-dev libbz2-dev libjpeg-dev libfreetype6-dev certbot letsencrypt GeoIP-devel python-mysql3.connector screen
 elif [ -e /usr/bin/yum ]; then
   # CentOS 7
   /usr/bin/yum install epel-release -y
   /usr/bin/yum update -y
-  /usr/bin/yum install -y gcc gcc-c++ make automake autoconf wget git bind screen python36 python36-pip libxml2-devel libzip-devel libpng-devel libxslt1-devel libjpeg-turbo-devel MySQL-python libtool certbot pcre pcre-devel GeoIP-devel krb5-devel pam-devel libmemcached-dev autoconf mariadb mariadb-server readline-devel clamd clamav-update clamav sqlite-devel sysstat perl-FindBin perl-IPC-Cmd logrotate
+  /usr/bin/yum install -y gcc gcc-c++ make automake autoconf wget git bind screen python36 python36-pip libxml2-devel libzip-devel libpng-devel libxslt1-devel libjpeg-turbo-devel MySQL-python libtool certbot pcre pcre-devel GeoIP-devel krb5-devel pam-devel libmemcached-dev autoconf mariadb mariadb-server readline-devel clamd clamav-update clamav sqlite-devel sysstat perl-FindBin perl-IPC-Cmd logrotate libpsl-devel
   # build-essential libfcgi-dev libbz2-dev libjpeg-dev libfreetype6-dev libpq-dev libreadline-dev letsencrypt pkg-config
 elif [ -e /usr/sbin/pkg ]; then
   # FreeBSD / Solaris
