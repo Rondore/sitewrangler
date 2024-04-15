@@ -336,7 +336,7 @@ def add_cron(sys_user):
         #print(command)
         subprocess.getoutput(command)
         print('Created system cron')
-    subprocess.getoutput("su - " + sys_user + " -c \"wp config set --path='~/public_html/' 'DISABLE_WP_CRON' true\" ")
+    subprocess.getoutput("su - " + sys_user + " -c \"wp config set --path='" + user_info.pw_dir + "public_html/' 'DISABLE_WP_CRON' true\" ")
     print('Disabled WordPress cron')
     return not found
 
