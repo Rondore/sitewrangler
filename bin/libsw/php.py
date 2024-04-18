@@ -682,7 +682,8 @@ def detect_distro_code():
             distro_name == 'ubuntu' ):
         return 'ldb'
     elif ( distro_name == 'centos' or
-            distro_name == 'rhel' ):
+            distro_name == 'rhel' or
+            distro_name == 'rocky'):
         # version = int(system.get_distro_version())
         # if version >= 7:
         #     return 'lrh'
