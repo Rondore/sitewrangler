@@ -821,7 +821,11 @@ sw setting set 'dkim_folder' "/etc/$exim/dkim/"
 sw setting set 'exim_folder' "/etc/$exim/"
 
 # enable sysstat
-sed -i 's/^ENABLED=.*/ENABLED="true"/' /etc/default/sysstat
+if [ -e /etc/default/sysstat ]; then
+  sed -i 's/^ENABLED=.*/ENABLED="true"/' /etc/default/sysstat
+else
+  systemctl enable --now sysstat 
+fi
 
 echo 'Stage 9: Start mail services'
 #
@@ -833,6 +837,3 @@ systemctl enable  $exim
 
 service dovecot restart
 service $exim restart
-
-echo -e "/usr/local/lib64\n/usr/local/lib" > /etc/ld.so.conf.d/aa_sitewrangler.conf
-ldconfig

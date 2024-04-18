@@ -80,7 +80,7 @@ def get_installed_version(sub_version):
     Args:
         sub_version - The first two numbers in a PHP version
     """
-    return subprocess.getoutput("/opt/php-" + sub_version + "/bin/php -v 2>/dev/null | grep '^PHP " + sub_version + "' | awk '{print $2}'")
+    return subprocess.getoutput('LD_LIBRARY_PATH="' + builder.ld_path + '" /opt/php-' + sub_version + "/bin/php -v 2>/dev/null | grep '^PHP " + sub_version + "' | awk '{print $2}'")
 
 def get_versions(excluded_array=False):
     """
@@ -628,6 +628,7 @@ def deploy_environment(versions, log):
             unit_file.write('ExecReload=/bin/kill -USR2 $MAINPID\n')
             unit_file.write('Restart=always')
             unit_file.write('RestartSec=3')
+            unit_file.write('Environment="LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib"')
             unit_file.write('\n')
             unit_file.write('[Install]\n')
             unit_file.write('WantedBy=multi-user.target\n')
@@ -681,7 +682,8 @@ def detect_distro_code():
             distro_name == 'ubuntu' ):
         return 'ldb'
     elif ( distro_name == 'centos' or
-            distro_name == 'rhel' ):
+            distro_name == 'rhel' or
+            distro_name == 'rocky'):
         # version = int(system.get_distro_version())
         # if version >= 7:
         #     return 'lrh'
@@ -806,7 +808,7 @@ class ImapBuilder(builder.AbstractGitBuilder):
         return 'https://github.com/uw-imap/imap.git'
 
     def make(self, log):
-        return log.run(['make', '-l', settings.get('max_build_load'), self.get_distro(), 'IP=6'])
+        return log.run(['make', '-l', settings.get('max_build_load'), self.get_distro(), 'IP=6'], env=builder.buid_env)
 
     def get_distro(self):
         distro = settings.get('imap_distro')
@@ -1049,7 +1051,7 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         if rebuild_config:
             log.log('Rebuilding PHP configure file to include PECL libraries')
             os.remove(self.source_dir() + 'configure')
-            log.run([self.source_dir() + 'buildconf', '--force'])
+            log.run([self.source_dir() + 'buildconf', '--force'], env=builder.buid_env)
         if version.first_is_higher('8.0.9999', self.versions['full']):
             remove_ssl2(log, self.source_dir() + 'ext/openssl/openssl.c')
 

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import subprocess
 
 class Log():
@@ -17,7 +18,7 @@ class Log():
         """
         self.open_log_file = open_log_file
 
-    def run(self, command, print_log=True):
+    def run(self, command, print_log=True, env=dict(os.environ)):
         """
         A convenience method to run CLI commands that steam their output to both
         the screen and to the open log file at the same time.
@@ -27,7 +28,7 @@ class Log():
             print_log - (optional) You can set this to False to have the output
                 log to the screen but not to the log file
         """
-        process = subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        process = subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT, env=env)
         while True:
             line = process.stdout.readline()
             if not line and process.returncode is not None:

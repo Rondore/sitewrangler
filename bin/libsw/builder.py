@@ -13,6 +13,8 @@ from libsw import logger, version, email, settings, file_filter, system
 from abc import ABC, abstractmethod
 
 debug = True
+ld_path = "/usr/local/lib64:/usr/local/lib"
+buid_env = dict(os.environ, LD_LIBRARY_PATH=ld_path)
 
 def is_frozen(slug):
     """
@@ -273,7 +275,7 @@ class AbstractBuilder(ABC):
         target_dir = self.source_dir()
         if os.path.exists(target_dir):
             os.chdir(target_dir)
-            log.run(['make', 'install'])
+            log.run(['make', 'install'], env=buid_env)
             if not settings.get_bool('build_server'):
                 self.clean(log)
         os.chdir(old_pwd)
@@ -296,7 +298,7 @@ class AbstractBuilder(ABC):
             #TODO add nice -19
             make = ['make', '-l', settings.get('max_build_load')]
             make.extend(self.make_args())
-            retval = log.run(make)
+            retval = log.run(make, env=buid_env)
         os.chdir(old_pwd)
         return retval
 
@@ -330,7 +332,7 @@ class AbstractBuilder(ABC):
         target_dir = self.source_dir()
         if os.path.exists(target_dir):
             os.chdir(target_dir)
-            log.run(['make', 'clean', '-l', settings.get('max_build_load')])
+            log.run(['make', 'clean', '-l', settings.get('max_build_load')], env=buid_env)
         os.chdir(old_pwd)
 
     def check_build(self):
@@ -369,7 +371,7 @@ class AbstractBuilder(ABC):
                 log.log("Running configuration")
                 if debug:
                     log.log('CONFIG: ' + ' '.join(command))
-                log.run(command)
+                log.run(command, env=buid_env)
             log.log("Running make")
             make_ret_val = self.make(log)
             if make_ret_val != 0: # if not success

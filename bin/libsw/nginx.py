@@ -614,6 +614,7 @@ http {
             unit_file.write('PrivateTmp=true\n')
             unit_file.write('Restart=always')
             unit_file.write('RestartSec=3')
+            unit_file.write('Environment="LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib"')
             unit_file.write('\n')
             unit_file.write('[Install]\n')
             unit_file.write('WantedBy=multi-user.target\n')
@@ -691,7 +692,7 @@ class NginxBuilder(builder.AbstractArchiveBuilder):
         super().__init__('nginx')
 
     def get_installed_version(self):
-        about_text = subprocess.getoutput('/usr/local/nginx/sbin/nginx -v')
+        about_text = subprocess.getoutput('LD_LIBRARY_PATH="' + builder.ld_path + '" /usr/local/nginx/sbin/nginx -v')
         match = re.match(r'nginx version: nginx/([0-9\.]*)', about_text)
         if match == None:
             return '0'
