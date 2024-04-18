@@ -42,6 +42,10 @@ class OpensslBuilder(builder.AbstractArchiveBuilder):
     def populate_config_args(self, log):
         return super().populate_config_args(log, ['./config'])
 
+    def install(self, log):
+        super().install(log)
+        deploy_environment(log)
+
     def cleanup_old_versions(self, log):
         super().cleanup_old_versions(log)
         if(int(self.source_version.split('.')[0]) >= 3):
@@ -59,6 +63,21 @@ def libs_path():
             path = paths[at]
         settings.set('openssl_libs', path)
     return path
+
+def deploy_environment(log):
+    """
+    Configure the system linker to use the new copy of openssl if the setting
+    'deploy_openssl' is set to True.
+
+    Args:
+        log - An open log to write to
+    """
+    if settings.get_bool('deploy_openssl'):
+        filename = '/etc/ld.so.conf.d/openssl.conf'
+        log.log('Making sure ' + filename + ' exists')
+        ld_filter = file_filter.AppendUnique(filename, libs_path())
+        ld_filter.run()
+    subprocess.run(['ldconfig'])
 
 def setup_lib32(log):
     """
