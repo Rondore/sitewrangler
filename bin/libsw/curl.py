@@ -42,25 +42,6 @@ class CurlBuilder(builder.AbstractArchiveBuilder):
     def dependencies(self):
         return ['openssl']
 
-    def install(self, log):
-        super().install(log)
-        deploy_environment(log)
-
-def deploy_environment(log):
-    """
-    Configure the system linker to use the new copy of openssl if the setting
-    'deploy_curl' is set to True.
-
-    Args:
-        log - An open log to write to
-    """
-    if settings.get_bool('deploy_curl'):
-        filename = '/etc/ld.so.conf.d/curl.conf'
-        log.log('Making sure ' + filename + ' exists')
-        ld_filter = file_filter.AppendUnique(filename, libs_path())
-        ld_filter.run()
-    subprocess.run(['ldconfig'])
-
 def libs_path():
     path = settings.get('curl_libs')
     if path == 'unset':
