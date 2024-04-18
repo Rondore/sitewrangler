@@ -614,7 +614,6 @@ http {
             unit_file.write('PrivateTmp=true\n')
             unit_file.write('Restart=always')
             unit_file.write('RestartSec=3')
-            unit_file.write('Environment="LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib"')
             unit_file.write('\n')
             unit_file.write('[Install]\n')
             unit_file.write('WantedBy=multi-user.target\n')
