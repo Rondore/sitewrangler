@@ -105,4 +105,8 @@ fi
 
 echo 'include /opt/sitewrangler/etc/logrotate.d' > /etc/logrotate.d/sitewrangler.conf
 
-sed -i 's/^ENABLED=.*/ENABLED="true"/' /etc/default/sysstat
+if [ -e /etc/default/sysstat ]; then
+  sed -i 's/^ENABLED=.*/ENABLED="true"/' /etc/default/sysstat
+else
+  systemctl enable --now sysstat 
+fi
