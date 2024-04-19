@@ -370,21 +370,25 @@ class AbstractBuilder(ABC):
             self.run_pre_config(log)
             log.log("Getting config arguments")
             command = self.populate_config_args(log)
+            config_ret_val = 0
             if len(command) > 0:
                 log.log("Running configuration")
                 if debug:
                     log.log('CONFIG: ' + ' '.join(command))
-                log.run(command, env=buid_env)
+                config_ret_val = log.run(command, env=buid_env)
             log.log("Running make")
-            make_ret_val = self.make(log)
-            if make_ret_val != 0: # if not success
-                log.log(self.slug + ' make command failed. (exit code ' + str(make_ret_val) + ') Exiting.')
+            if config_ret_val != 0:
+                log.log(self.slug + ' configure command failed. (exit code ' + str(config_ret_val) + ') Exiting.')
             else:
-                log.log("Installing")
-                self.install(log)
-                log.log("Build completed for " + self.slug + " at " + str(datetime.datetime.now()))
-                success = self.check_build()
-                self.cleanup_old_versions(log)
+                make_ret_val = self.make(log)
+                if make_ret_val != 0: # if not success
+                    log.log(self.slug + ' make command failed. (exit code ' + str(make_ret_val) + ') Exiting.')
+                else:
+                    log.log("Installing")
+                    self.install(log)
+                    log.log("Build completed for " + self.slug + " at " + str(datetime.datetime.now()))
+                    success = self.check_build()
+                    self.cleanup_old_versions(log)
 
         os.chdir(old_pwd)
         if not success:
