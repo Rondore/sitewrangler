@@ -332,7 +332,9 @@ def set_sys_user_version(username, version):
                 target,
                 '# START PHP VERSION PATH',
                 '# END PHP VERSION PATH',
-                'export PATH=/opt/php-' + version + '/bin' + os.pathsep + '$PATH'
+                'export PATH=/opt/php-' + version + '/bin' + os.pathsep + '$PATH\n' +
+                'alias php=\'LD_LIBRARY_PATH="/usr/local/lib64:/usr/local/lib" php\'\n' +
+                'alias wp=\'LD_LIBRARY_PATH="/usr/local/lib64:/usr/local/lib" wp\''
             ).run()
         link_dir = '/home/' + username + '/.local/bin/'
         link_path = link_dir + 'php'
