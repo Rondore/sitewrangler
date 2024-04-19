@@ -15,7 +15,7 @@ class CurlBuilder(builder.AbstractArchiveBuilder):
         super().__init__('curl')
 
     def get_installed_version(self):
-        about_text = subprocess.getoutput('LD_LIBRARY_PATH="' + builder.ld_path + '" /usr/local/bin/curl -V')
+        about_text = subprocess.getoutput(builder.set_sh_ld + '/usr/local/bin/curl -V')
         match = re.match(r'curl ([0-9\.]*)', about_text)
         if match == None:
             return '0'

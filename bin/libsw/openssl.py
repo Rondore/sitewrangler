@@ -12,7 +12,7 @@ class OpensslBuilder(builder.AbstractArchiveBuilder):
         super().__init__('openssl')
 
     def get_installed_version(self):
-        about_text = subprocess.getoutput('LD_LIBRARY_PATH="' + builder.ld_path + '" /usr/local/bin/openssl version')
+        about_text = subprocess.getoutput(builder.set_sh_ld + '/usr/local/bin/openssl version')
         match = re.match(r'OpenSSL ([0-9a-z\.]*)', about_text)
         if match == None:
             return '0'

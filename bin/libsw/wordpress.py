@@ -331,7 +331,7 @@ def add_cron(sys_user):
             break
     if not found:
         minute = random.randint(0,59)
-        cron = str(minute) + ' 0 * * * LD_LIBRARY_PATH="' + builder.ld_path + '" ~/.local/bin/php ~/public_html/wp-cron.php'
+        cron = str(minute) + ' 0 * * * ' + builder.set_sh_ld + '~/.local/bin/php ~/public_html/wp-cron.php'
         command = "su - " + sys_user + " -c \"crontab -l 2>/dev/null | { cat; echo '" + cron + "'; } | crontab -\" "
         #print(command)
         subprocess.getoutput(command)

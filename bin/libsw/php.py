@@ -80,7 +80,7 @@ def get_installed_version(sub_version):
     Args:
         sub_version - The first two numbers in a PHP version
     """
-    return subprocess.getoutput('LD_LIBRARY_PATH="' + builder.ld_path + '" /opt/php-' + sub_version + "/bin/php -v 2>/dev/null | grep '^PHP " + sub_version + "' | awk '{print $2}'")
+    return subprocess.getoutput(builder.set_sh_ld + '/opt/php-' + sub_version + "/bin/php -v 2>/dev/null | grep '^PHP " + sub_version + "' | awk '{print $2}'")
 
 def get_versions(excluded_array=False):
     """

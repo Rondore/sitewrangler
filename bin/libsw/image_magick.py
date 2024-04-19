@@ -53,7 +53,7 @@ class ImageMagickBuilder(builder.AbstractGitBuilder):
         return latest_ver + '-' + str(latest_patch)
 
     def version_reference(self):
-        return subprocess.getoutput('LD_LIBRARY_PATH="' + builder.ld_path + '" /usr/local/bin/magick --version | grep "^Version" | sed "s~.*ImageMagick\s\+\([0-9\\.\\-]\\+\\)\\s\\+.*~\\1~"')
+        return subprocess.getoutput(builder.set_sh_ld + '/usr/local/bin/magick --version | grep "^Version" | sed "s~.*ImageMagick\s\+\([0-9\\.\\-]\\+\\)\\s\\+.*~\\1~"')
 
     def fetch_source(self, source, log):
         self.branch = self._get_latest_tag()

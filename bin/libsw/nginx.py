@@ -692,7 +692,7 @@ class NginxBuilder(builder.AbstractArchiveBuilder):
         super().__init__('nginx')
 
     def get_installed_version(self):
-        about_text = subprocess.getoutput('LD_LIBRARY_PATH="' + builder.ld_path + '" /usr/local/nginx/sbin/nginx -v')
+        about_text = subprocess.getoutput(builder.set_sh_ld + '/usr/local/nginx/sbin/nginx -v')
         match = re.match(r'nginx version: nginx/([0-9\.]*)', about_text)
         if match == None:
             return '0'

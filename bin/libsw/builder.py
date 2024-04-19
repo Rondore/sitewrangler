@@ -18,6 +18,7 @@ ld_flags = "-L/usr/local/lib64/ -L/usr/local/lib/"
 cpp_flags = "-I/usr/local/include/"
 pkg_config_path = "/usr/local/lib64/pkgconfig/:/usr/local/lib/pkgconfig/"
 buid_env = dict(os.environ, LD_LIBRARY_PATH=ld_path, LDFLAGS=ld_flags, CPPFLAGS=cpp_flags, PKG_CONFIG_PATH=pkg_config_path)
+set_sh_ld = 'LD_LIBRARY_PATH="' + ld_path + '" '
 
 def is_frozen(slug):
     """
