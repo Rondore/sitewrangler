@@ -64,7 +64,7 @@ def wp_cron_disabled(domain):
     """
     sys_user = nginx.user_from_domain(domain)
     webroot = user.webroot(sys_user)
-    output = subprocess.getoutput('sudo -u "' + sys_user + '" -i wp config get --path="' + webroot + '" DISABLE_WP_CRON')
+    output = subprocess.getoutput('su - "' + sys_user + '" -c "' + builder.set_sh_ld + 'wp config get --path=\'' + webroot + '\' DISABLE_WP_CRON"')
     output = output.lower()
     if output == 'true':
         return True
@@ -78,7 +78,7 @@ def sys_cron_enabled(domain):
         domain - The domain associated with the installation
     """
     sys_user = nginx.user_from_domain(domain)
-    output = subprocess.getoutput('sudo -u "' + sys_user + '" -i crontab -l 2>/dev/null | grep -Ev "^[ \s]*#"')
+    output = subprocess.getoutput('su - "' + sys_user + '" -c \'crontab -l 2>/dev/null | grep -Ev "^[ \s]*#"\'')
     if output.find('/wp-cron.php') == -1:
         return False
     return True
@@ -96,7 +96,7 @@ def get_version(domain):
     """
     sys_user = nginx.user_from_domain(domain)
     webroot = user.webroot(sys_user)
-    return subprocess.getoutput('sudo -u "' + sys_user + '" -i wp core version --path="' + webroot + '"')
+    return subprocess.getoutput('su - "' + sys_user + '" -c \'' + builder.set_sh_ld + 'wp core version --path="' + webroot + '"\'')
 
 def get_db_info(sys_user, webroot=False):
     """
@@ -109,9 +109,9 @@ def get_db_info(sys_user, webroot=False):
     """
     if webroot == False:
         webroot = user.webroot(sys_user)
-    db_user = subprocess.getoutput('sudo -u "' + sys_user + '" -i wp config get --path="' + webroot + '" DB_USER')
-    name = subprocess.getoutput('sudo -u "' + sys_user + '" -i wp config get --path="' + webroot + '" DB_NAME')
-    password = subprocess.getoutput('sudo -u "' + sys_user + '" -i wp config get --path="' + webroot + '" DB_PASSWORD')
+    db_user = subprocess.getoutput('su - "' + sys_user + '"  -c \'' + builder.set_sh_ld + 'wp config get --path="' + webroot + '" DB_USER\'')
+    name = subprocess.getoutput('su - "' + sys_user + '"  -c \'' + builder.set_sh_ld + 'wp config get --path="' + webroot + '" DB_NAME\'')
+    password = subprocess.getoutput('su - "' + sys_user + '"  -c \'' + builder.set_sh_ld + 'wp config get --path="' + webroot + '" DB_PASSWORD\'')
     return (name, db_user, password)
 
 def update_config(sys_user, db_name, db_user, db_password, path=False):
@@ -145,8 +145,8 @@ def set_config_value(name, value, sys_user, path):
     """
     if path == False:
         path = user.home_dir(sys_user) + 'public_html/'
-    os.system('sudo -u "' + sys_user + '" -i wp config set ' +
-        ' --path="' + path + '" "' + name + '" "' + value + '"')
+    os.system('su - "' + sys_user + '"  -c \'' + builder.set_sh_ld + 'wp config set ' +
+        ' --path="' + path + '" "' + name + '" "' + value + '"\'')
 
 def install_files(sys_user, db_name, db_user, db_password, path=False):
     """
@@ -170,9 +170,9 @@ def install_files(sys_user, db_name, db_user, db_password, path=False):
     os.chdir(path)
 
     # Download WordPress
-    os.system("su - '" + sys_user + "' -c \"wp core download --path='" + path + "'\"")
+    os.system("su - '" + sys_user + "' -c \"" + builder.set_sh_ld + "wp core download --path='" + path + "'\"")
     # Configure WordPress
-    command = "su - '" + sys_user + "' -c \"wp config create --skip-check" + \
+    command = "su - '" + sys_user + "' -c \"" + builder.set_sh_ld + "wp config create --skip-check" + \
             " --path='" + path + "'" + \
             " --dbname='" + db_name + "'" + \
             " --dbuser='" + db_user + "'" + \
@@ -274,8 +274,8 @@ def clone_site(old_site, new_user, new_domain, db_conn):
     print('Permissions fixed')
     os.system("sed -i 's~" + old_dir + "~" + new_dir + "~g' " + new_dir + "wp-config.php")
     update_config(new_user, db_name, db_user, db_pass)
-    os.system("sudo -u '" + new_user + "' -i wp search-replace --path='" + new_dir + "' '" + old_site + "' '" + new_domain + "'")
-    os.system("sudo -u '" + new_user + "' -i wp cache flush --path='" + new_dir + "'")
+    os.system("su - '" + new_user + "' -c \"" + builder.set_sh_ld + "wp search-replace --path='" + new_dir + "' '" + old_site + "' '" + new_domain + "'\"")
+    os.system("su - '" + new_user + "' -c \"" + builder.set_sh_ld + "wp cache flush --path='" + new_dir + "'\"")
     has_cert = cert_try_loop(new_domain, new_user)
     if has_cert:
         nginx.add_ssl_to_site_hosts(new_domain)
@@ -336,7 +336,7 @@ def add_cron(sys_user):
         #print(command)
         subprocess.getoutput(command)
         print('Created system cron')
-    subprocess.getoutput("su - " + sys_user + " -c \"wp config set --path='" + user_info.pw_dir + "public_html/' 'DISABLE_WP_CRON' true\" ")
+    subprocess.getoutput("su - " + sys_user + " -c \"" + builder.set_sh_ld + "wp config set --path='" + user_info.pw_dir + "public_html/' 'DISABLE_WP_CRON' true\" ")
     print('Disabled WordPress cron')
     return not found
 
@@ -372,13 +372,13 @@ def create_one_time_login(domain):
 def get_outdated(domain):
     docroot = nginx.docroot_from_domain(domain)
     sys_user = nginx.user_from_domain(domain)
-    core = subprocess.getoutput("su - " + sys_user + " -c 'wp core check-update --path=\"" + docroot + "\" --fields=update_type --format=csv 2>/dev/null | tail -n +2'")
-    themes = subprocess.getoutput("su - " + sys_user + " -c 'wp theme list --path=\"" + docroot + "\" --update=available --fields=name --format=csv 2>/dev/null | tail -n +2'")
-    plugins =  subprocess.getoutput("su - " + sys_user + " -c 'wp plugin list --path=\"" + docroot + "\" --update=available --fields=name --format=csv 2>/dev/null | tail -n +2'")
+    core = subprocess.getoutput("su - " + sys_user + " -c '" + builder.set_sh_ld + "wp core check-update --path=\"" + docroot + "\" --fields=update_type --format=csv 2>/dev/null | tail -n +2'")
+    themes = subprocess.getoutput("su - " + sys_user + " -c '" + builder.set_sh_ld + "wp theme list --path=\"" + docroot + "\" --update=available --fields=name --format=csv 2>/dev/null | tail -n +2'")
+    plugins =  subprocess.getoutput("su - " + sys_user + " -c '" + builder.set_sh_ld + "wp plugin list --path=\"" + docroot + "\" --update=available --fields=name --format=csv 2>/dev/null | tail -n +2'")
     return [core, themes.splitlines(), plugins.splitlines()]
 
 def get_site_option(sys_user, docroot, option):
-    value = subprocess.getoutput("su - " + sys_user + " -c 'wp option get " + option + " --path=\"" + docroot + "\"' ")
+    value = subprocess.getoutput("su - " + sys_user + " -c '" + builder.set_sh_ld + "wp option get " + option + " --path=\"" + docroot + "\"' ")
     return value
 
 def get_site_url(sys_user, docroot):
