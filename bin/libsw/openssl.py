@@ -68,15 +68,18 @@ def setup_lib32(log):
         log - An open log to write to
     """
     files = ['libcrypto.a', 'libcrypto.so', 'libcrypto.so.1.1', 'libssl.a', 'libssl.so', 'libssl.so.1.1']
-    links = ['pkgconfig/libssl.pc', 'pkgconfig/openssl.pc', 'pkgconfig/libcrypto.pc']
+    links = ['libssl.pc', 'openssl.pc', 'libcrypto.pc']
     for f in files:
         file = '/usr/local/lib/' + f
         if os.path.exists(file):
             os.remove(file)
             log.log('Deleted ' + file)
+    link_dir = '/usr/local/lib/pkgconfig/'
+    if not os.path.isdir(link_dir):
+        os.mkdir(link_dir)
     for l in links:
-        link = '/usr/local/lib/' + l
-        target = '/usr/local/lib64/' + l
+        link = link_dir + l
+        target = '/usr/local/lib64/pkgconfig/' + l
         if not os.path.islink(link):
             if os.path.exists(link):
                 os.remove(link)
