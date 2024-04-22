@@ -1,1 +1,1 @@
---with-ssl=/usr/local/
+--with-ssl=openssl
