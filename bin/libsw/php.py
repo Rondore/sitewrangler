@@ -601,7 +601,10 @@ def deploy_environment(versions, log):
     bin_link_exists = os.path.islink(bin_path) or os.path.isfile(bin_path)
     if not bin_link_exists:
         os.symlink('/opt/php-' + versions['sub'] + '/bin/php', bin_path)
-    copyfile(src_dir + 'php.ini-production', '/opt/php-' + versions['sub'] + '/lib/php.ini')
+    lib_dir = '/opt/php-' + versions['sub'] + '/lib/'
+    if not os.path.isdir(lib_dir):
+        lib_dir = '/opt/php-' + versions['sub'] + '/lib64/'
+    copyfile(src_dir + 'php.ini-production', lib_dir + 'php.ini')
 
     fpm_conf_name = '/opt/php-' + versions['sub'] + '/etc/php-fpm.conf'
     copyfile(fpm_conf_name + '.default', fpm_conf_name)
@@ -928,9 +931,12 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         return source
 
     def dependencies(self):
+        from libsw import build_index
         deps = ['openssl', 'uw-imap', 'curl']
         for pecl_builder in get_registered_pecl_builders():
             deps.append(pecl_builder.slug)
+        if 'postgresql' in build_index.enabled_slugs():
+            deps.append('postgresql')
         return deps
 
     # def get_config_arg_file(self):
@@ -995,12 +1001,16 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
 
 
     def populate_config_args(self, log, command=False):
+        from libsw import build_index
         if command == False:
             command = ['./configure'];
         command.append('--prefix=/opt/php-' + self.versions['sub'])
         command.append('--with-mysql-sock=' + settings.get('mysql_socket'))
         for pecl_builder in get_registered_pecl_builders():
             command.append(pecl_builder.get_php_build_arg())
+        if 'postgresql' in build_index.enabled_slugs():
+            command.append('--with-pgsql=/usr/local/pgsql/')
+            command.append('--with-pdo-pgsql=/usr/local/pgsql/')
         return super().populate_config_args(log, command)
 
     def source_dir(self):
