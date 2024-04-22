@@ -497,7 +497,7 @@ def deploy_environment(log, first_install):
         log - An open log to write to
         first_install - A boolean value indicating if this is the first time this function has been run
     """
-    systemd_file = '/lib/systemd/system/nginx.service'
+    systemd_file = builder.get_systemd_config_path() + 'nginx.service'
 
     if first_install:
         #TODO add these lines to /usr/local/nginx/conf/nginx.conf with a FileFilter

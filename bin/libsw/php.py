@@ -616,7 +616,7 @@ def deploy_environment(versions, log):
 
     write_primary_logrotate()
 
-    systemd_file = '/lib/systemd/system/php-' + versions['sub'] + '-fpm.service'
+    systemd_file = builder.get_systemd_config_path() + 'php-' + versions['sub'] + '-fpm.service'
 
     if os.path.isfile(systemd_file):
         restart_service(versions['sub'], log)
@@ -644,7 +644,8 @@ def deploy_environment(versions, log):
 
         from libsw import firewall
         firewall.writepignore()
-        log.run('lfd', '-r')
+        if os.path.exists('/usr/sbin/lfd'):
+            log.run('lfd', '-r')
 
 def remove_environment(subversion, log):
     """
