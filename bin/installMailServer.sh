@@ -1,17 +1,10 @@
 #!/bin/bash
 
-if [ ! -e /usr/local/bin/sw ]; then
-  ln -s /opt/sitewrangler/bin/sitewrangler.py /usr/local/bin/sw
-fi
-
-if [ ! -e /etc/bash_completion.d/sw ]; then
-  echo "complete -C 'sw complete' sw" > /etc/bash_completion.d/sw
-fi
-
 #TODO allow user to set FQDN for mail server hostname
 mail_hostname=$(hostname)
 #TODO allow user to select main domain to use for non-SNI connections
-non_sni_cert_domain="thegreatdivide.info"
+echo -n "Enter domain to use for non-SNI connections: "
+read non_sni_cert_domain
 
 if [ ! -e /etc/maildomains ]; then
   echo "*: nobody" > /etc/maildomains
@@ -60,18 +53,9 @@ elif [ -e /usr/sbin/pkg ]; then
   ln -s /usr/local/bin/python3.6 /usr/local/bin/python3
 fi
 
-echo 'Stage 2: Install Python Dependancies'
+echo 'Stage 2: null'
 
 cd /usr/include
-
-#python
-#$pip install --upgrade pip
-$pip install argcomplete
-$pip install fallocate
-$pip install inquirer
-$pip install python-iptables
-$pip install python-dateutil
-$pip install tabulate
 
 echo 'Stage 3: Add crons'
 

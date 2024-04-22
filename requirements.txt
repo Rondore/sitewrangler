@@ -1,0 +1,8 @@
+argcomplete
+fallocate
+inquirer
+python-iptables
+python-dateutil
+tabulate
+requests
+mysql-connector

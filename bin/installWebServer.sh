@@ -1,14 +1,5 @@
 #!/bin/bash
 
-if [ ! -e /usr/local/bin/sw ]; then
-  ln -s /opt/sitewrangler/bin/sitewrangler.py /usr/local/bin/sw
-fi
-
-if [ ! -e /etc/bash_completion.d/sw ]; then
-  echo "complete -C 'sw complete' sw" > /etc/bash_completion.d/sw
-fi
-
-pip="pip3"
 if [ -e /usr/bin/apt-get ]; then
   # Debian/Ubuntu
   if fuser /var/lib/dpkg/lock &>/dev/null; then
@@ -37,6 +28,7 @@ if [ -e /usr/bin/apt-get ]; then
     /usr/bin/apt-get install -y libmysqlclient-dev
   fi
 elif [ -e /usr/bin/zypper ]; then
+  # OpenSUSE
   /usr/bin/zypper --non-interactive install gcc gcc-c++ make automake autoconf wget git bind python3 python3-pip libxml2-devel libzip-devel libpng16-devel libxslt-devel libjpeg62-devel libtool pcre-devel krb5-devel pam-devel libmemcached-devel mariadb mariadb-client pkgconf readline6-devel clamav sqlite3-devel libbz2-devel oniguruma-devel sysstat python3-devel perl-FindBin-Real perl-IPC-Run3 logrotate libpsl-devel libicu-devel
 elif [ -e /usr/bin/dnf ]; then
   # Fedora / RHEL
@@ -53,7 +45,6 @@ elif [ -e /usr/bin/yum ]; then
 elif [ -e /usr/sbin/pkg ]; then
   # FreeBSD / Solaris
   if [ "$(echo "$release" | grep '^ID=')" == "ID=solaris" ]; then
-    pip="pip-3.5"
     /usr/sbin/pkg install -y gcc make automake autoconf wget git python-35 pip-35 pkg://solaris/service/network/dns/bind screen logrotate mysql-57 libtool pcre2
   else
     /usr/sbin/pkg install -y gcc make++ automake autoconf wget git python36 py36-pip bind914 screen logrotate
@@ -62,18 +53,6 @@ elif [ -e /usr/sbin/pkg ]; then
 fi
 
 cd /usr/include
-
-#python
-#$pip install --upgrade pip
-$pip install argcomplete
-$pip install fallocate
-$pip install inquirer
-$pip install python-iptables
-$pip install python-dateutil
-$pip install tabulate
-
-$pip install requests
-$pip install mysql-connector
 
 #cron jobs
 cat > /etc/cron.daily/check_domain_expiration <<THEEND
@@ -103,12 +82,4 @@ test -e /usr/local/bin/wp || ln -s /opt/wp-cli/wp-cli.phar /usr/local/bin/wp
 mkdir -p /usr/local/ssl
 if [ ! -e /usr/local/ssl/certs ]; then
   ln -s /etc/ssl/certs/ /usr/local/ssl/certs
-fi
-
-echo 'include /opt/sitewrangler/etc/logrotate.d' > /etc/logrotate.d/sitewrangler.conf
-
-if [ -e /etc/default/sysstat ]; then
-  sed -i 's/^ENABLED=.*/ENABLED="true"/' /etc/default/sysstat
-else
-  systemctl enable --now sysstat 
 fi
