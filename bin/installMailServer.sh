@@ -804,13 +804,6 @@ echo 'Stage 8: Add dkim folder to settings'
 sw setting set 'dkim_folder' "/etc/$exim/dkim/"
 sw setting set 'exim_folder' "/etc/$exim/"
 
-# enable sysstat
-if [ -e /etc/default/sysstat ]; then
-  sed -i 's/^ENABLED=.*/ENABLED="true"/' /etc/default/sysstat
-else
-  systemctl enable --now sysstat 
-fi
-
 echo 'Stage 9: Start mail services'
 #
 # (re)start mail services
