@@ -660,7 +660,7 @@ def remove_environment(subversion, log):
     if os.path.exists(installpath):
         shutil.rmtree(installpath)
         log.log('Deleted ' + installpath)
-    servicefile = '/lib/systemd/system/php-' + subversion + '-fpm.service'
+    servicefile = builder.get_systemd_config_path() + 'php-' + subversion + '-fpm.service'
     if os.path.exists(servicefile):
         os.remove(servicefile)
         log.log('Deleted ' + servicefile)
