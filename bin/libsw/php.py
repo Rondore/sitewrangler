@@ -689,7 +689,8 @@ def detect_distro_code():
         return 'ldb'
     elif ( distro_name == 'centos' or
             distro_name == 'rhel' or
-            distro_name == 'rocky'):
+            distro_name == 'rocky' or
+            distro_name[:9] == 'opensuse-'):
         # version = int(system.get_distro_version())
         # if version >= 7:
         #     return 'lrh'
