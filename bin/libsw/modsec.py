@@ -81,6 +81,10 @@ class ModSecurityBuilder(builder.AbstractGitBuilder):
 
     def install(self, log):
         super().install(log)
+        lib_dir = '/usr/local/modsecurity/lib'
+        lib64_dir = '/usr/local/modsecurity/lib64'
+        if os.path.isdir(lib64_dir) and not os.path.exists(lib_dir):
+            os.symlink(lib64_dir, lib_dir, target_is_directory=True)
         from libsw import nginx
         nginx.reload()
 
