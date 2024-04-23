@@ -7,8 +7,8 @@ limit_req_zone $binary_remote_addr zone=UNDERDOMAINN:1m rate=15r/m;
 
 server {
 
-    listen LOCALIPP:80 ;
-    listen [IPV66]:80 ;
+    listen 0.0.0.0:80 ;
+    listen [::]:80 ;
 
     server_name DOMAINNAMEE www.DOMAINNAMEE;
 
