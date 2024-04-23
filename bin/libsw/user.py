@@ -35,11 +35,8 @@ def get_user_group(username, numerical=False):
         username - The name of the system user
         numberical - (optional) If True, return the group id instead of group name
     """
-    gid = subprocess.getoutput('grep \'^' + username + ':\' /etc/passwd | cut -d: -f4')
-    if numerical: return gid
-
-    gid = subprocess.getoutput('for line in `cat /etc/group`; do if [ -n "$(echo "$line" | cut -d: -f3 | grep \'^' + gid + '$\')" ]; then echo "$line" | cut -d: -f1; fi; done')
-    return gid
+    if numerical: return subprocess.getoutput("id -g '" + username + "'")
+    return subprocess.getoutput("id -gn '" + username + "'")
 
 def select_user(allow_root=False):
     """
