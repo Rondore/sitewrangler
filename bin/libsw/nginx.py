@@ -444,15 +444,37 @@ def remove_vhost(domain):
         reload()
     return removed
 
-def user_from_domain(domain):
+def get_user_domains(username):
+    """
+    Get domain names associated with a system user.
+
+    Args:
+        username - The system user
+    """
+    enabled_domains = []
+    for domain in enabled_sites():
+        if username == user_from_domain(domain, only='enabled'):
+            enabled_domains.append(domain)
+    disabled_domains = []
+    for domain in disabled_sites():
+        if username == user_from_domain(domain, only='disabled'):
+            disabled_domains.append(domain)
+    return [enabled_domains, disabled_domains]
+
+def user_from_domain(domain, only=False):
     """
     Get the system user associated with a domain based on the contents of the
     domain's nginx vhost file.
 
     Args:
         domain - The domain used in finding the system user
+        only - Limit returned values to sites that are enabled or disabled. Values must be False, 'enabled' or 'disabled'
     """
     vhost = get_vhost_path(domain)
+    if only == 'enabled' and vhost[-9:] == '.disabled':
+        return False
+    if only == 'disabled' and vhost[-9:] != '.disabled':
+        return False
     header_match = re.compile('^#')
     line_match = re.compile('^#\s*User\s*:')
     if os.path.exists(vhost):

@@ -138,111 +138,112 @@ def select_updated_version():
         version_cache = inquirer.prompt(questions)['ver']
     return version_cache
 
-def get_enabled_vhost_path(version, domain):
+def get_enabled_vhost_path(version, username):
     """
     Get the path for an enabled PHP vhost file regardless of wether or not it exists.
 
     Args:
         version - The PHP version used in the file path
-        domain - The domain used in the file path
+        username - The system user used in the file path
     """
-    return '/opt/php-' + version + '/etc/php-fpm.d/' + domain + '.conf'
+    return '/opt/php-' + version + '/etc/php-fpm.d/' + username + '.conf'
 
-def get_disabled_vhost_path(version, domain):
+def get_disabled_vhost_path(version, username):
     """
     Get the path for a disabled PHP vhost file regardless of wether or not it exists.
 
     Args:
         version - The PHP version used in the file path
-        domain - The domain used in the file path
+        username - The system user used in the file path
     """
-    return '/opt/php-' + version + '/etc/php-fpm.d/' + domain + '.conf.disabled'
+    return '/opt/php-' + version + '/etc/php-fpm.d/' + username + '.conf.disabled'
 
-def get_vhost_path(version, domain):
+def get_vhost_path(version, user):
     """
-    Get the path of the vhost file associated with a domain. If no vhost file is
+    Get the path of the vhost file associated with a system user. If no vhost file is
     found the enabled path is returned.
 
     Args:
         version - The PHP version used in the file path
-        domain - The domain used in the file path
+        user - The system user associated with the vhost file
     """
-    enabled_path = get_enabled_vhost_path(version, domain)
-    disabled_path = get_disabled_vhost_path(version, domain)
+    enabled_path = get_enabled_vhost_path(version, user)
+    disabled_path = get_disabled_vhost_path(version, user)
     if not os.path.exists(enabled_path) and os.path.exists(disabled_path):
         return disabled_path
     return enabled_path
 
-def make_vhost(user, domain, php_version):
+def make_vhost(username, php_version):
     """
     Create a new PHP vhost file and restart the appropriate PHP service.
 
     Args:
-        user - The system user who's home directory stores site files
-        domain - The domain associated with the site
+        username - The system user who's home directory stores site files
         php_version - The PHP version to use
     """
     with open(settings.get('install_path') + 'etc/php-fpm-site', 'r') as template:
-        vhost_path = get_enabled_vhost_path(php_version, domain)
+        vhost_path = get_enabled_vhost_path(php_version, username)
         vhost_dir = os.path.dirname(vhost_path)
+        group = user.get_user_group(username)
         if not os.path.exists(vhost_dir):
             os.makedirs(vhost_dir)
         with open(vhost_path, 'w') as host:
             for line in template:
-                line = line.replace('USERNAME', user, 10000)
+                line = line.replace('USERNAME', username, 10000)
+                line = line.replace('GROUPNAME', group, 10000)
                 host.write(line)
-    add_logrotate_file(domain)
+    add_logrotate_file(username)
     print('Created ' + vhost_path)
     restart_service(php_version)
-    set_sys_user_version(user, php_version)
+    set_sys_user_version(username, php_version)
 
-def enable_vhost(domain):
+def enable_vhost(username):
     """
     Remove the suffix ".disabled" from a vhost file and restart the appropriate
     PHP service, thereby enabling the site/file.
 
     Args:
-        domain - The domain to enable
+        username - The system user to enable
     """
-    php_version = get_site_version(domain)
+    php_version = get_sys_user_version(username)
     if php_version == False:
         return False
-    source = get_disabled_vhost_path(php_version, domain)
+    source = get_disabled_vhost_path(php_version, username)
     target = source[:-9] # to trim off '.disabled'
     os.rename(source, target)
     restart_service(php_version)
     return True
 
-def disable_vhost(domain):
+def disable_vhost(username):
     """
     Append the suffix ".disabled" to a vhost file and restart the appropriate
     PHP service, thereby disabling the site/file.
 
     Args:
-        domain - The domain to disable
+        username - The system user to disable
     """
-    php_version = get_site_version(domain)
+    php_version = get_sys_user_version(username)
     if php_version == False:
         return False
-    source = get_enabled_vhost_path(php_version, domain)
+    source = get_enabled_vhost_path(php_version, username)
     target = source + '.disabled'
     os.rename(source, target)
     restart_service(php_version)
     return True
 
-def remove_vhost(domain):
+def remove_vhost(username):
     """
-    Delete the PHP vhost file associated with a domain and then restart the
+    Delete the PHP vhost file associated with a user and then restart the
     appropriate PHP service.
 
     Args:
-        domain - Delete the file associated with this domain
+        username - Delete the file associated with this system user
     """
-    php_version = get_site_version(domain)
+    php_version = get_sys_user_version(username)
     if php_version == False:
         return False
-    enabled_path = get_enabled_vhost_path(php_version, domain)
-    disabled_path = get_disabled_vhost_path(php_version, domain)
+    enabled_path = get_enabled_vhost_path(php_version, username)
+    disabled_path = get_disabled_vhost_path(php_version, username)
     removed = False
     if os.path.exists(enabled_path):
         os.remove(enabled_path)
@@ -252,66 +253,43 @@ def remove_vhost(domain):
         removed = True
     if removed:
         restart_service(php_version)
-    remove_logrotate_file(domain)
+    remove_logrotate_file(username)
     return removed
 
-def edit_vhost(domain):
+def edit_vhost(username):
     """
     Allow the user to edit a vhost file with the system text edior, restart the
     appropriate PHP service if modified.
 
     Args:
-        domain - The domain associated with the PHP vhost file
+        username - The username associated with the PHP vhost file
     """
-    php_version = get_site_version(domain)
+    php_version = get_sys_user_version(username)
     if php_version == False:
         return False
-    path = get_vhost_path(php_version, domain)
+    path = get_vhost_path(php_version, username)
     if input_util.edit_file(path):
         print('Restarting php-' + php_version + '-fpm to apply changes.')
         restart_service(php_version)
 
-def user_from_domain(domain, php_version=False):
-    """
-    Get the system user associated with a domain based on the contents of the
-    domain's PHP vhost file.
-
-    Args:
-        domain - The domain used in finding the system user
-        php_version - (optional) The PHP to use to access the vhost file
-    """
-    if php_version == False:
-        php_version = get_site_version(domain)
-    path = get_vhost_path(php_version, domain)
-    with open(path) as vhost:
-        for line in vhost:
-            if line.startswith('listen =') or line.startswith('listen='):
-                path = line.split('=')[1].strip()
-                if ( path.startswith('"') and path.endswith('"') ) \
-                        or ( path.startswith("'") and path.endswith("'") ):
-                    path = path[1:-1]
-                if path.startswith('/home/'):
-                    username = path.split('/')[2]
-                    return username
-    return False
-
-def get_site_version(domain):
+def get_sys_user_version(username):
     """
     Get the PHP version currently in use for a given site.
 
     Args:
-        domain - The domain used in finding the system user
+        username - The system user used in finding the PHP version
     """
     avaliable_versions = get_versions()
     # Search for enabled configuration files
     for ver in avaliable_versions:
-        if os.path.exists('/opt/php-' + ver + '/etc/php-fpm.d/' + domain + '.conf'):
+        if os.path.exists('/opt/php-' + ver + '/etc/php-fpm.d/' + username + '.conf'):
             return ver
     # Search for disabled configuration files
     for ver in avaliable_versions:
-        if os.path.exists('/opt/php-' + ver + '/etc/php-fpm.d/' + domain + '.conf.disabled'):
+        if os.path.exists('/opt/php-' + ver + '/etc/php-fpm.d/' + username + '.conf.disabled'):
             return ver
     return False
+
 
 def set_sys_user_version(username, version):
     """
@@ -418,19 +396,18 @@ def select_disabled_conf(query_message):
     conf_file_text = inquirer.prompt(questions)['f']
     return sites[display_sites.index(conf_file_text)]
 
-def change_version(domain, old_version, new_version):
+def change_version(username, old_version, new_version):
     """
-    Change the PHP version used for a domain.
+    Change the PHP version used for a given system user.
 
     Args:
-        domain - The domain of the site to change
+        username - The system user of the site to change
         old_version - The current PHP version
         new_version - The PHP version to change the site to
     """
     if not os.path.exists('/opt/php-' + new_version + '/etc/php-fpm.d/'):
         os.makedirs('/opt/php-' + new_version + '/etc/php-fpm.d/')
-    os.rename('/opt/php-' + old_version + '/etc/php-fpm.d/' + domain + '.conf', '/opt/php-' + new_version + '/etc/php-fpm.d/' + domain + '.conf')
-    username = user_from_domain(domain)
+    os.rename('/opt/php-' + old_version + '/etc/php-fpm.d/' + username + '.conf', '/opt/php-' + new_version + '/etc/php-fpm.d/' + username + '.conf')
     set_sys_user_version(username, new_version)
 
     print('Restarting PHP...')
@@ -704,32 +681,31 @@ def detect_distro_code():
     elif distro_name == 'freebsd':
         return 'bsf'
 
-def logrotate_file(domain):
+def logrotate_file(username):
     """
-    Get the logrotate configuration filename associated with a domain.
+    Get the logrotate configuration filename associated with a system user.
 
     Args:
-        domain - The domain name
+        username - The system user
     """
-    return settings.get('install_path') + 'etc/logrotate.d/php-sites/' + domain
+    return settings.get('install_path') + 'etc/logrotate.d/php-sites/' + username
 
-def add_logrotate_file(domain):
+def add_logrotate_file(username):
     """
     Write out a configuration file for logrotated to rotate a website's php log
     files.
 
     Args:
-        domain - The domain name
+        username - The system user
     """
     if not os.path.exists(primary_logrotate_file()):
         write_primary_logrotate()
-    user = user_from_domain(domain)
-    filename = logrotate_file(domain)
+    filename = logrotate_file(username)
     dirpath = os.path.dirname(filename)
     if not os.path.exists(dirpath):
         os.makedirs(dirpath)
     with open(filename, 'w+') as output:
-        output.write('/home/' + user + '/logs/php.*.log {\n\
+        output.write('/home/' + username + '/logs/php.*.log {\n\
   weekly\n\
   rotate 52\n\
   dateext\n\
@@ -738,14 +714,14 @@ def add_logrotate_file(domain):
   missingok\n\
 }')
 
-def remove_logrotate_file(domain):
+def remove_logrotate_file(username):
     """
-    Remove the configuration file for logrotated to a given domain.
+    Remove the configuration file for logrotated to a given system user.
 
     Args:
-        domain - The domain name
+        username - The system user
     """
-    filename = logrotate_file(domain)
+    filename = logrotate_file(username)
     if os.path.exists(filename):
         os.remove(filename)
         return True
@@ -759,9 +735,6 @@ def write_primary_logrotate():
     Write out a configuration file for logrotated to rotate the global php log
     files. Also add an include directive that will include all website
     logrotated files.
-
-    Args:
-        domain - The domain name
     """
     install_path = settings.get('install_path')
     filename = primary_logrotate_file()
