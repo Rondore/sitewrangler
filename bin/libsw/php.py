@@ -788,7 +788,7 @@ class ImapBuilder(builder.AbstractGitBuilder):
         return 'https://github.com/uw-imap/imap.git'
 
     def make(self, log):
-        return log.run(['make', '-l', settings.get('max_build_load'), self.get_distro(), 'IP=6'], env=builder.buid_env)
+        return log.run(['make', '-l', settings.get('max_build_load'), self.get_distro(), 'IP=6'], env=builder.build_env)
 
     def get_distro(self):
         distro = settings.get('imap_distro')
@@ -1038,7 +1038,7 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         if rebuild_config:
             log.log('Rebuilding PHP configure file to include PECL libraries')
             os.remove(self.source_dir() + 'configure')
-            log.run([self.source_dir() + 'buildconf', '--force'], env=builder.buid_env)
+            log.run([self.source_dir() + 'buildconf', '--force'], env=builder.build_env)
         if version.first_is_higher('8.0.9999', self.versions['full']):
             remove_ssl2(log, self.source_dir() + 'ext/openssl/openssl.c')
 

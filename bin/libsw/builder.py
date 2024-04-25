@@ -17,7 +17,7 @@ ld_path = "/usr/local/lib64:/usr/local/lib"
 ld_flags = "-L/usr/local/lib64/ -L/usr/local/lib/"
 cpp_flags = "-I/usr/local/include/"
 pkg_config_path = "/usr/local/lib64/pkgconfig/:/usr/local/lib/pkgconfig/"
-buid_env = dict(os.environ, LD_LIBRARY_PATH=ld_path, LDFLAGS=ld_flags, CPPFLAGS=cpp_flags, PKG_CONFIG_PATH=pkg_config_path)
+build_env = dict(os.environ, LD_LIBRARY_PATH=ld_path, LDFLAGS=ld_flags, CPPFLAGS=cpp_flags, PKG_CONFIG_PATH=pkg_config_path)
 set_sh_ld = 'LD_LIBRARY_PATH=' + ld_path + ' '
 
 def is_frozen(slug):
@@ -279,7 +279,7 @@ class AbstractBuilder(ABC):
         target_dir = self.source_dir()
         if os.path.exists(target_dir):
             os.chdir(target_dir)
-            log.run(['make', 'install'], env=buid_env)
+            log.run(['make', 'install'], env=build_env)
             if not settings.get_bool('build_server'):
                 self.clean(log)
         os.chdir(old_pwd)
@@ -302,7 +302,7 @@ class AbstractBuilder(ABC):
             #TODO add nice -19
             make = ['make', '-l', settings.get('max_build_load')]
             make.extend(self.make_args())
-            retval = log.run(make, env=buid_env)
+            retval = log.run(make, env=build_env)
         os.chdir(old_pwd)
         return retval
 
@@ -336,7 +336,7 @@ class AbstractBuilder(ABC):
         target_dir = self.source_dir()
         if os.path.exists(target_dir):
             os.chdir(target_dir)
-            log.run(['make', 'clean', '-l', settings.get('max_build_load')], env=buid_env)
+            log.run(['make', 'clean', '-l', settings.get('max_build_load')], env=build_env)
         os.chdir(old_pwd)
 
     def check_build(self):
@@ -376,7 +376,7 @@ class AbstractBuilder(ABC):
                 log.log("Running configuration")
                 if debug:
                     log.log('CONFIG: ' + ' '.join(command))
-                config_ret_val = log.run(command, env=buid_env)
+                config_ret_val = log.run(command, env=build_env)
             log.log("Running make")
             if config_ret_val != 0:
                 log.log(self.slug + ' configure command failed. (exit code ' + str(config_ret_val) + ') Exiting.')
