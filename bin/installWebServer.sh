@@ -29,7 +29,7 @@ if [ -e /usr/bin/apt-get ]; then
   fi
 elif [ -e /usr/bin/zypper ]; then
   # OpenSUSE
-  /usr/bin/zypper --non-interactive install gcc gcc-c++ make automake autoconf wget git bind python3 python3-pip libxml2-devel libzip-devel libpng16-devel libxslt-devel libjpeg62-devel libtool pcre-devel krb5-devel pam-devel libmemcached-devel mariadb mariadb-client pkgconf readline6-devel clamav sqlite3-devel libbz2-devel oniguruma-devel sysstat python3-devel perl-FindBin-Real perl-IPC-Run3 logrotate libpsl-devel libicu-devel
+  /usr/bin/zypper --non-interactive install gcc gcc-c++ make automake autoconf wget git bind python3 python3-pip libxml2-devel libzip-devel libpng16-devel libxslt-devel libjpeg62-devel libtool pcre-devel krb5-devel pam-devel libmemcached-devel mariadb mariadb-client pkgconf readline6-devel clamav sqlite3-devel libbz2-devel oniguruma-devel sysstat python3-devel perl-FindBin-Real perl-IPC-Run3 logrotate libpsl-devel libicu-devel python3-certbot
 elif [ -e /usr/bin/dnf ]; then
   # Fedora / RHEL
   /usr/bin/dnf install -y epel-release
