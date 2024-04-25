@@ -13,9 +13,9 @@ from libsw import logger, version, email, settings, file_filter, system
 from abc import ABC, abstractmethod
 
 debug = True
-ld_path = "/usr/local/lib64:/usr/local/lib"
-ld_flags = "-L/usr/local/lib64/ -L/usr/local/lib/"
-cpp_flags = "-I/usr/local/include/"
+ld_path = "/usr/local/lib64:/usr/local/lib:/usr/local/pgsql/lib:/usr/local/modsecurity/lib"
+ld_flags = "-L/usr/local/lib64/ -L/usr/local/lib/ -L/usr/local/pgsql/lib -L/usr/local/modsecurity/lib"
+cpp_flags = "-I/usr/local/include/ -I/usr/local/modsecurity/include -I/usr/local/pgsql/include"
 pkg_config_path = "/usr/local/lib64/pkgconfig/:/usr/local/lib/pkgconfig/"
 build_env = dict(os.environ, LD_LIBRARY_PATH=ld_path, LDFLAGS=ld_flags, CPPFLAGS=cpp_flags, PKG_CONFIG_PATH=pkg_config_path)
 set_sh_ld = 'LD_LIBRARY_PATH=' + ld_path + ' '
