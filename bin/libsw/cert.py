@@ -40,7 +40,7 @@ def create_le_certs(domains, username):
     domain_string = ''
     for dom in domains:
         domain_string += ' -d ' + dom.lower().strip()
-    command = 'letsencrypt certonly --noninteractive --webroot' + domain_string + ' --webroot-path "' + user.home_dir(username.strip()) + '/public_html/"'
+    command = 'certbot certonly --noninteractive --webroot' + domain_string + ' --webroot-path "' + user.home_dir(username.strip()) + '/public_html/"'
     print(command)
     return 0 == os.system(command)
 
@@ -171,7 +171,7 @@ def check():
     """
     with open(settings.install_path + 'var/log/letsencrypt', 'w+') as log_file:
         log = logger.Log(log_file)
-        log.run(['letsencrypt', 'renew'])
+        log.run(['certbot', 'renew'])
         local_count = deploy_locals()
         count = deploy_all_exim_domains(log)
         if count > 0:
