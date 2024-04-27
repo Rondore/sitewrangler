@@ -125,7 +125,9 @@ def replace_template_line(line, needle, replacement, is_header=False):
             if first_colin != -1:
                 second_colin = line.find(":", first_colin + 1)
                 if second_colin != -1:
-                    line = line[0:second_colin] + line[second_colin:].replace(needle, replacement)
+                    key = line[first_colin+1:second_colin].strip()
+                    if key == needle:
+                        line = line[0:second_colin] + ': ' + replacement + '\n'
                     custom_field = True
     if not custom_field:
         line = line.replace(needle, replacement)
