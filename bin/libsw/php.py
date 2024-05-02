@@ -71,6 +71,10 @@ def php_binary_path(sub_version):
 def vhost_path(sub_version):
     return php_build_path(sub_version) + 'etc/php-fpm.d/'
 
+def get_lib_path(sub_version):
+    dir = subprocess.getoutput(php_binary_path(sub_version)+ '-config --ini-path')
+    return dir + '/'
+
 def restart_service(version, log=logger.Log(False)):
     """
     Restart a given PHP service.
@@ -589,9 +593,7 @@ def deploy_environment(versions, log):
     bin_link_exists = os.path.islink(bin_path) or os.path.isfile(bin_path)
     if not bin_link_exists:
         os.symlink(php_binary_path(versions['sub']), bin_path)
-    lib_dir = base_path + 'lib/'
-    if not os.path.isdir(lib_dir):
-        lib_dir = base_path + 'lib64/'
+    lib_dir = get_lib_path(versions['sub'])
     copyfile(src_dir + 'php.ini-production', lib_dir + 'php.ini')
 
     fpm_conf_name = base_path + 'etc/php-fpm.conf'
