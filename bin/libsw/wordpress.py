@@ -175,9 +175,7 @@ def install_files(sys_user, db_name, db_user, db_password, path=False):
             ' --path="' + path + '"' + \
             ' --dbname="' + db_name + '"' + \
             ' --dbuser="' + db_user + '"' + \
-            ' --dbpass="' + db_password + '"'
-    print(command)
-    os.system(command)
+            ' --dbpass="' + db_password + '"')
 
     # Reset environment
     os.seteuid(whoami)
@@ -392,10 +390,9 @@ def get_site_home(sys_user, docroot):
     return home
 
 def install_wp_cli():
-    install_directory = '/opt/wp-cli/'
+    install_directory = settings.get('build_path') + 'wp-cli/'
     download_url = 'https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar'
     save_file = install_directory + 'wp-cli.phar'
-    bin_path = '/usr/local/bin/wp'
     if not os.path.exists(install_directory):
         os.makedirs(install_directory)
     response = requests.get(download_url)
@@ -403,9 +400,6 @@ def install_wp_cli():
         f.write(response.content)
     old_mode = os.stat(save_file)
     os.chmod(save_file, old_mode.st_mode | stat.S_IEXEC)
-    if not os.path.exists(bin_path):
-        os.makedirs('/usr/local/bin')
-        os.symlink(save_file, bin_path)
 
 def run_cli(user, docroot, cli_args):
     """

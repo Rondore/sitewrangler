@@ -6,13 +6,16 @@ import requests
 import subprocess
 from libsw import version, file_filter, builder, settings
 
+build_path = settings.get('build_path')
+binary_path = build_path + 'bin/openssl'
+
 class OpensslBuilder(builder.AbstractArchiveBuilder):
     """A class to build OpenSSL from source."""
     def __init__(self):
         super().__init__('openssl')
 
     def get_installed_version(self):
-        about_text = subprocess.getoutput(builder.set_sh_ld + '/usr/local/bin/openssl version')
+        about_text = subprocess.getoutput(builder.set_sh_ld + binary_path + ' version')
         match = re.match(r'OpenSSL ([0-9a-z\.]*)', about_text)
         if match == None:
             return '0'
@@ -50,7 +53,7 @@ class OpensslBuilder(builder.AbstractArchiveBuilder):
 def libs_path():
     path = settings.get('openssl_libs')
     if path == 'unset':
-        paths = ['/usr/local/ssl/lib', '/usr/local/lib64', '/usr/local/lib']
+        paths = [build_path + 'ssl/lib', build_path + 'lib64', build_path + 'lib']
         at = -1
         while path == 'unset' or not os.path.exists(path + '/libssl.so.1.1'):
             at += 1
@@ -70,16 +73,16 @@ def setup_lib32(log):
     files = ['libcrypto.a', 'libcrypto.so', 'libcrypto.so.1.1', 'libssl.a', 'libssl.so', 'libssl.so.1.1']
     links = ['libssl.pc', 'openssl.pc', 'libcrypto.pc']
     for f in files:
-        file = '/usr/local/lib/' + f
+        file = build_path + 'lib/' + f
         if os.path.exists(file):
             os.remove(file)
             log.log('Deleted ' + file)
-    link_dir = '/usr/local/lib/pkgconfig/'
+    link_dir = build_path + 'lib/pkgconfig/'
     if not os.path.isdir(link_dir):
-        os.mkdir(link_dir)
+        os.makedirs(link_dir)
     for l in links:
         link = link_dir + l
-        target = '/usr/local/lib64/pkgconfig/' + l
+        target = build_path + 'lib64/pkgconfig/' + l
         if not os.path.islink(link):
             if os.path.exists(link):
                 os.remove(link)

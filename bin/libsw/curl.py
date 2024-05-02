@@ -7,6 +7,9 @@ import glob
 import subprocess
 from libsw import logger, version, builder, settings, file_filter
 
+build_path = settings.get('build_path')
+binary_path = build_path + 'bin/curl'
+
 class CurlBuilder(builder.AbstractArchiveBuilder):
     """
     A class to build curl from source.
@@ -15,7 +18,7 @@ class CurlBuilder(builder.AbstractArchiveBuilder):
         super().__init__('curl')
 
     def get_installed_version(self):
-        about_text = subprocess.getoutput(builder.set_sh_ld + '/usr/local/bin/curl -V')
+        about_text = subprocess.getoutput(builder.set_sh_ld + binary_path + ' -V')
         match = re.match(r'curl ([0-9\.]*)', about_text)
         if match == None:
             return '0'
@@ -59,7 +62,7 @@ def get_curl_path():
   """
   Get the path the current curl source directory.
   """
-  dirs = glob.glob('/usr/local/src/curl-*/')
+  dirs = glob.glob(build_path + 'src/curl-*/')
   dir = False
   for d in dirs:
       if not dir:

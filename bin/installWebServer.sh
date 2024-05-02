@@ -1,5 +1,7 @@
 #!/bin/bash
 
+SW_DIR="$( cd -- "$(dirname "$0")/.." >/dev/null 2>&1 ; pwd -P )"
+
 if [ -e /usr/bin/apt-get ]; then
   # Debian/Ubuntu
   if fuser /var/lib/dpkg/lock &>/dev/null; then
@@ -72,14 +74,10 @@ cat > /etc/cron.d/certbot <<THEEND
 THEEND
 chmod +x /etc/cron.d/certbot
 
-#setup wp-cli
-mkdir -p /opt/wp-cli/
-wget https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar -O /opt/wp-cli/wp-cli.phar
-chmod +x /opt/wp-cli/wp-cli.phar
-test -e /usr/local/bin || mkdir -p /usr/local/bin
-test -e /usr/local/bin/wp || ln -s /opt/wp-cli/wp-cli.phar /usr/local/bin/wp
-
-mkdir -p /usr/local/ssl
-if [ ! -e /usr/local/ssl/certs ]; then
-  ln -s /etc/ssl/certs/ /usr/local/ssl/certs
+mkdir -p $SW_DIR/ssl
+if [ ! -e $SW_DIR/ssl/certs ]; then
+  ln -s /etc/ssl/certs/ $SW_DIR/ssl/certs
 fi
+
+#setup wp-cli
+sw wp install-cli

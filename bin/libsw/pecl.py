@@ -4,11 +4,11 @@ import glob
 import re
 import requests
 from abc import abstractmethod
-from libsw import builder, version
+from libsw import builder, version, settings
 
 class PeclBuilder(builder.AbstractArchiveBuilder):
 
-    def __init__(self, build_dir="/usr/local/src/pecl/"):
+    def __init__(self, build_dir=settings.get('build_path') + 'src/pecl/'):
         slug = self.get_pecl_slug()
         super().__init__('pecl-' + slug, build_dir)
         self.up_to_date_version = False

@@ -1,8 +1,11 @@
 #!/bin/bash
 
+SW_DIR="$( cd -- "$(dirname "$0")/.." >/dev/null 2>&1 ; pwd -P )"
+
 #setup CSF
 old_pwd=$(pwd)
-cd /usr/local/src/
+mkdir -p $SW_DIR/src/
+cd $SW_DIR/src/
 rm -fv csf.tgz
 wget https://download.configserver.com/csf.tgz
 tar -xzf csf.tgz
@@ -63,9 +66,9 @@ sed -Ei 's~^([ \s]*)MODSEC_LOG[ \s]*=.*~\1MODSEC_LOG = "/opt/sitewrangler/log/mo
 
 sed -Ei 's~^([ \s]*)CUSTOM1_LOG[ \s]*=.*~\1CUSTOM1_LOG = "/var/log/exim4/rejectlog"~' /etc/csf/csf.conf
 
-sed -Ei 's~^([ \s]*)CUSTOM2_LOG[ \s]*=.*~\1CUSTOM2_LOG = "/usr/local/nginx/logs/error.log"~' /etc/csf/csf.conf
+sed -Ei 's~^([ \s]*)CUSTOM2_LOG[ \s]*=.*~\1CUSTOM2_LOG = "'$SW_DIR'/nginx/logs/error.log"~' /etc/csf/csf.conf
 
-sed -Ei 's~^([ \s]*)CUSTOM3_LOG[ \s]*=.*~\1CUSTOM3_LOG = "/usr/local/nginx/logs/access.log"~' /etc/csf/csf.conf
+sed -Ei 's~^([ \s]*)CUSTOM3_LOG[ \s]*=.*~\1CUSTOM3_LOG = "'$SW_DIR'/nginx/logs/access.log"~' /etc/csf/csf.conf
 
 echo "Enter the two-letter country code(s) you would like to have access \
 to reading and sending email. See this link for codes: \
@@ -89,7 +92,7 @@ echo "Enter the country code(s) for which you would like to block all traffic in
 read -p '(leave blank to allow all countries): ' codes
 sed -Ei "s/^([ \\s]*)CC_DENY[ \\s]*=.*/\\CC_DENY = \"$codes\"/" /etc/csf/csf.conf
 
-nginx_log="/usr/local/nginx/logs/error.log"
+nginx_log="$SW_DIR/nginx/logs/error.log"
 syslog="/etc/csf/csf.syslogs"
 if [ -z "$(grep "$nginx_log" $syslog)" ]; then
   sed -i "s~/var/log/nginx/error_log~/var/log/nginx/error_log\n$nginx_log~" $syslog

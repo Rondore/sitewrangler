@@ -13,10 +13,11 @@ from libsw import logger, version, email, settings, file_filter, system
 from abc import ABC, abstractmethod
 
 debug = True
-ld_path = "/usr/local/lib64:/usr/local/lib:/usr/local/pgsql/lib:/usr/local/modsecurity/lib"
-ld_flags = "-L/usr/local/lib64/ -L/usr/local/lib/ -L/usr/local/pgsql/lib -L/usr/local/modsecurity/lib"
-cpp_flags = "-I/usr/local/include/ -I/usr/local/modsecurity/include -I/usr/local/pgsql/include"
-pkg_config_path = "/usr/local/lib64/pkgconfig/:/usr/local/lib/pkgconfig/"
+build_path = settings.get('build_path')
+ld_path = build_path + 'lib64:' + build_path + 'lib:' + build_path + 'pgsql/lib:' + build_path + 'modsecurity/lib'
+ld_flags = '-L' + build_path + 'lib64/ -L' + build_path + 'lib/ -L' + build_path + 'pgsql/lib -L' + build_path + 'modsecurity/lib'
+cpp_flags = '-I' + build_path + 'include/ -I' + build_path + 'modsecurity/include -I' + build_path + 'pgsql/include'
+pkg_config_path = build_path + 'lib64/pkgconfig/:' + build_path + 'lib/pkgconfig/'
 build_env = dict(os.environ, LD_LIBRARY_PATH=ld_path, LDFLAGS=ld_flags, CPPFLAGS=cpp_flags, PKG_CONFIG_PATH=pkg_config_path)
 set_sh_ld = 'LD_LIBRARY_PATH=' + ld_path + ' '
 
@@ -94,17 +95,30 @@ def populate_patch_file(file_path, patch_array, log):
                     patch_array.append([name, url])
     return patch_array
 
+def apply_config_arg_variables(dirty_args=[]):
+    clean_args = []
+    variables = [
+        ['SW_BUILD_PATH', build_path],
+        ['SW_INSTALL_PATH', settings.get('install_path')]
+    ]
+    for arg in dirty_args:
+        for name, value in variables:
+            arg = arg.replace(name, value)
+        clean_args.append(arg)
+    return clean_args
+
 class AbstractBuilder(ABC):
     """
     An abstract class to build source packages downloaded from tar files.
     """
-    def __init__(self, slug, build_dir="/usr/local/src/", source_version=False):
+    def __init__(self, slug, build_dir=build_path + 'src/', source_version=False):
         self.slug = slug
         self.source_version = source_version
         self.build_dir = build_dir
         # a dynamic list of builder objects that are dependant upon this software
         # this shold only be populated by a BuildQueue or similar
         self.dependents = []
+        self.build_env = build_env
 
     @abstractmethod
     def get_source_url(self):
@@ -279,7 +293,7 @@ class AbstractBuilder(ABC):
         target_dir = self.source_dir()
         if os.path.exists(target_dir):
             os.chdir(target_dir)
-            log.run(['make', 'install'], env=build_env)
+            log.run(['make', 'install'], env=self.build_env)
             if not settings.get_bool('build_server'):
                 self.clean(log)
         os.chdir(old_pwd)
@@ -302,7 +316,7 @@ class AbstractBuilder(ABC):
             #TODO add nice -19
             make = ['make', '-l', settings.get('max_build_load')]
             make.extend(self.make_args())
-            retval = log.run(make, env=build_env)
+            retval = log.run(make, env=self.build_env)
         os.chdir(old_pwd)
         return retval
 
@@ -336,7 +350,7 @@ class AbstractBuilder(ABC):
         target_dir = self.source_dir()
         if os.path.exists(target_dir):
             os.chdir(target_dir)
-            log.run(['make', 'clean', '-l', settings.get('max_build_load')], env=build_env)
+            log.run(['make', 'clean', '-l', settings.get('max_build_load')], env=self.build_env)
         os.chdir(old_pwd)
 
     def check_build(self):
@@ -371,12 +385,13 @@ class AbstractBuilder(ABC):
             self.run_pre_config(log)
             log.log("Getting config arguments")
             command = self.populate_config_args(log)
+            command = apply_config_arg_variables(command)
             config_ret_val = 0
             if len(command) > 0:
                 log.log("Running configuration")
                 if debug:
                     log.log('CONFIG: ' + ' '.join(command))
-                config_ret_val = log.run(command, env=build_env)
+                config_ret_val = log.run(command, env=self.build_env)
             log.log("Running make")
             if config_ret_val != 0:
                 log.log(self.slug + ' configure command failed. (exit code ' + str(config_ret_val) + ') Exiting.')
@@ -538,7 +553,7 @@ class AbstractArchiveBuilder(AbstractBuilder):
             type = 'r:gz'
         tarname = self.build_dir + self.slug + '-' + self.source_version + ext
         if not os.path.exists(self.build_dir):
-            os.mkdir(self.build_dir)
+            os.makedirs(self.build_dir)
         response = requests.get(source)
         with open(tarname, "wb") as f:
             f.write(response.content)
@@ -555,7 +570,7 @@ class AbstractArchiveBuilder(AbstractBuilder):
 
 class AbstractGitBuilder(AbstractBuilder):
     "Abstract class to build source packages."
-    def __init__(self, slug, build_dir="/usr/local/src/", source_version=False, branch='master'):
+    def __init__(self, slug, build_dir=build_path + 'src/', source_version=False, branch='master'):
         self.branch = branch
         super().__init__(slug, build_dir, source_version)
 

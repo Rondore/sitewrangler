@@ -1,1 +1,3 @@
 shared
+--prefix=SW_BUILD_PATH
+--openssldir=SW_BUILD_PATH

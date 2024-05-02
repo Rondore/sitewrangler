@@ -15,7 +15,7 @@ server {
 
     root HOMEDIRR/public_html;
 
-    modsecurity_rules_file "/opt/sitewrangler/etc/modsec/sites/DOMAINNAMEE";
+    modsecurity_rules_file "INSTALLPATHHetc/modsec/sites/DOMAINNAMEE";
 
     gzip on;
     etag on;

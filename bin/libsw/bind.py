@@ -240,7 +240,7 @@ def make_zone(domain):
         domain - The primary domain of the zone file
     """
     if not os.path.exists(zone_folder):
-        os.mkdir(zone_folder)
+        os.makedirs(zone_folder)
     template = open(settings.get('install_path') + 'etc/zone-file', 'r')
     ns1 = settings.get('nameserver_one')
     ns2 = settings.get('nameserver_two')

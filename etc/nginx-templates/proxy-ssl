@@ -5,7 +5,7 @@
 # Field    : PROXYPORTT : 443
 
 
-proxy_cache_path /usr/local/nginx/cache/USERNAMEE levels=1 keys_zone=USERNAMEE:128m inactive=1h;
+proxy_cache_path BUILDPATHHnginx/cache/USERNAMEE levels=1 keys_zone=USERNAMEE:128m inactive=1h;
 
 limit_req_zone $binary_remote_addr zone=UNDERDOMAINN:1m rate=15r/m;
 
@@ -26,7 +26,7 @@ server {
     gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript;
     gzip_vary on;
 
-    modsecurity_rules_file "/opt/sitewrangler/etc/modsec/sites/DOMAINNAMEE";
+    modsecurity_rules_file "INSTALLPATHHetc/modsec/sites/DOMAINNAMEE";
 
     rewrite ^/webmail/?$ https://DOMAINNAMEE:2096/ permanent;
 
@@ -98,7 +98,7 @@ server {
     proxy_cache_key "$scheme$request_method$host$request_uri";
     proxy_cache_convert_head on;
 
-    modsecurity_rules_file "/opt/sitewrangler/etc/modsec/sites/DOMAINNAMEE";
+    modsecurity_rules_file "INSTALLPATHHetc/modsec/sites/DOMAINNAMEE";
 
     rewrite ^/webmail/?$ https://DOMAINNAMEE:2096/ permanent;
 

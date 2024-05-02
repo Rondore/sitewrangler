@@ -55,13 +55,13 @@ THEEND
 chmod +x "$SW_MAIN"
 
 if [ ! -e /usr/local/bin/sw ]; then
-  ln -s /opt/sitewrangler/bin/sitewrangler_venv.py /usr/local/bin/sw
+  ln -s $SW_MAIN /usr/local/bin/sw
 fi
 
 if [ ! -e /etc/bash_completion.d/sw ]; then
   echo "complete -C 'sw complete' sw" > /etc/bash_completion.d/sw
 fi
 
-echo 'include /opt/sitewrangler/etc/logrotate.d' > /etc/logrotate.d/sitewrangler.conf
+echo "include $SW_DIR/etc/logrotate.d" > /etc/logrotate.d/sitewrangler.conf
 
 systemctl enable --now sysstat

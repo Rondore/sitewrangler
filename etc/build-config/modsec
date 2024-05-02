@@ -1,2 +1,4 @@
+--prefix=SW_BUILD_PATH
 --enable-standalone-module
---with-curl=/usr/local/
+--with-curl=SW_BUILD_PATH
+--with-maxmind=SW_BUILD_PATH

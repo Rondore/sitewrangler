@@ -190,7 +190,7 @@ def deploy_locals():
         uid = getpwnam(username).pw_uid
         gid = getgrnam(username).gr_gid
         if not os.path.exists(target_dir):
-            os.mkdir(target_dir)
+            os.makedirs(target_dir)
         if deploy('/etc/letsencrypt/live/' + domain + '/', target_dir, uid, gid):
             print('Deployed ' + username + ' certificate to ~/certs/')
             count += 1

@@ -21,7 +21,7 @@ server {
     gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript;
     gzip_vary on;
 
-    modsecurity_rules_file "/opt/sitewrangler/etc/modsec/sites/DOMAINNAMEE";
+    modsecurity_rules_file "INSTALLPATHHetc/modsec/sites/DOMAINNAMEE";
     index index.html index.htm index.php;
 
     rewrite ^/webmail/?$ https://DOMAINNAMEE:2096/ permanent;

@@ -3,7 +3,7 @@
 --with-png-dir=/usr
 --with-libxml-dir=/usr
 --with-pcre-regex
---with-curl=/usr/local/include/curl
+--with-curl=SW_BUILD_PATHinclude/curl
 --enable-zip
 --with-gd
 --enable-gd-native-ttf

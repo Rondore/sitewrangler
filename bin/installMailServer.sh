@@ -1,5 +1,7 @@
 #!/bin/bash
 
+SW_DIR="$( cd -- "$(dirname "$0")/.." >/dev/null 2>&1 ; pwd -P )"
+
 #TODO allow user to set FQDN for mail server hostname
 mail_hostname=$(hostname)
 #TODO allow user to select main domain to use for non-SNI connections
@@ -48,9 +50,6 @@ elif [ -e /usr/sbin/pkg ]; then
   else
     /usr/sbin/pkg install -y python36 py36-pip bind914 screen exim dovecot logrotate ca_root_nss logrotate
   fi
-  # MAYBE: rndc-confgen -a
-  ln -s /usr/local/bin/pip-3.6 /usr/local/bin/pip3
-  ln -s /usr/local/bin/python3.6 /usr/local/bin/python3
 fi
 
 echo 'Stage 2: null'
@@ -797,7 +796,7 @@ sed -i 's~\([ \s]*\)mail[ \s]*=[ \s]*maildir:.*$~\1mail = maildir:%{dict:userdb.
 #
 
 echo 'Stage 8: Add master logrotate entry'
-echo 'include /opt/sitewrangler/etc/logrotate.d' > /etc/logrotate.d/sitewrangler.conf
+echo "include $SW_DIR/etc/logrotate.d" > /etc/logrotate.d/sitewrangler.conf
 
 echo 'Stage 8: Add dkim folder to settings'
 # set mail settings
