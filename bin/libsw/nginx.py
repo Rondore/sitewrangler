@@ -748,7 +748,6 @@ class NginxBuilder(builder.AbstractArchiveBuilder):
     """
     def __init__(self):
         super().__init__('nginx')
-        self.build_env = dict(self.build_env, MODSECURITY_LIB=builder.build_path + 'lib/', MODSECURITY_INC=builder.build_path + 'include/')
 
     def get_installed_version(self):
         about_text = subprocess.getoutput(builder.set_sh_ld + binary_file + ' -v')
@@ -786,6 +785,11 @@ class NginxBuilder(builder.AbstractArchiveBuilder):
 
     def dependencies(self):
         return ['openssl', 'modsec-nginx', 'cache-nginx']
+    
+    def build(self):
+        mod_lib = builder.get_pkg_config_var('modsecurity','libdir')
+        self.build_env = dict(self.build_env, MODSECURITY_LIB=mod_lib, MODSECURITY_INC=builder.build_path + 'include/')
+        return super().build()
 
     def install(self, log):
         first_install = False

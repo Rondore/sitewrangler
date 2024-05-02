@@ -14,9 +14,9 @@ from abc import ABC, abstractmethod
 
 debug = True
 build_path = settings.get('build_path')
-ld_path = build_path + 'lib64:' + build_path + 'lib:' + build_path + 'pgsql/lib:' + build_path + 'modsecurity/lib'
-ld_flags = '-L' + build_path + 'lib64/ -L' + build_path + 'lib/ -L' + build_path + 'pgsql/lib -L' + build_path + 'modsecurity/lib'
-cpp_flags = '-I' + build_path + 'include/ -I' + build_path + 'modsecurity/include -I' + build_path + 'pgsql/include'
+ld_path = build_path + 'lib64:' + build_path + 'lib'
+ld_flags = '-L' + build_path + 'lib64/ -L' + build_path + 'lib/'
+cpp_flags = '-I' + build_path + 'include/'
 pkg_config_path = build_path + 'lib64/pkgconfig/:' + build_path + 'lib/pkgconfig/'
 build_env = dict(os.environ, LD_LIBRARY_PATH=ld_path, LDFLAGS=ld_flags, CPPFLAGS=cpp_flags, PKG_CONFIG_PATH=pkg_config_path)
 set_sh_ld = 'LD_LIBRARY_PATH=' + ld_path + ' '
@@ -664,3 +664,7 @@ def get_systemd_config_path():
         if os.path.isdir(path):
             return path
     return possibilities[0]
+
+def get_pkg_config_var(package_name, variable):
+    command = 'PKG_CONFIG_PATH="' + pkg_config_path + '" pkg-config "--variable=' + variable + '" "' + package_name + '"'
+    return subprocess.getoutput(command)
