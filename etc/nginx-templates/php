@@ -7,13 +7,14 @@ fastcgi_cache_path BUILDPATHHnginx/cache/USERNAMEE levels=1 keys_zone=USERNAMEE:
 limit_req_zone $binary_remote_addr zone=UNDERDOMAINN:1m rate=15r/m;
 
 server {
-    listen 0.0.0.0:80 ;
-    listen [::]:80 ;
+    listen 0.0.0.0:80;
+    listen [::]:80;
 
     server_name DOMAINNAMEE www.DOMAINNAMEE;
 
     root HOMEDIRRpublic_html;
 
+    http2 on;
     gzip on;
     etag on;
     gzip_proxied any;
@@ -102,6 +103,8 @@ server {
     listen [::]:80 ;
 
     server_name webmail.DOMAINNAMEE mail.DOMAINNAMEE;
+
+    http2 on;
 
     location ~ "^/(\.well-known\/|[A-Fa-f0-9]{32}.txt$)" {
         root HOMEDIRRpublic_html;

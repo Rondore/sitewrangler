@@ -7,13 +7,14 @@
 limit_req_zone $binary_remote_addr zone=UNDERDOMAINN:1m rate=15r/m;
 
 server {
-    listen 0.0.0.0:80 ;
-    listen [::]:80 ;
+    listen 0.0.0.0:80;
+    listen [::]:80;
 
     server_name DOMAINNAMEE www.DOMAINNAMEE;
 
     root HOMEDIRRpublic_html;
 
+    http2 on;
     gzip on;
     etag on;
     gzip_proxied any;
@@ -41,9 +42,11 @@ server {
 server {
 
     listen 0.0.0.0:80;
-    listen [::]:80 ;
+    listen [::]:80;
 
     server_name webmail.DOMAINNAMEE mail.DOMAINNAMEE;
+
+    http2 on;
 
     location ~ "^/(\.well-known\/|[A-Fa-f0-9]{32}.txt$)" {
         root HOMEDIRRpublic_html;
@@ -61,8 +64,8 @@ server {
 
 server {
 
-    listen 0.0.0.0:443 ssl http2 ;
-    listen [::]:443 ssl http2 ;
+    listen 0.0.0.0:443 ssl;
+    listen [::]:443 ssl;
 
     server_name DOMAINNAMEE www.DOMAINNAMEE;
 
@@ -72,6 +75,7 @@ server {
 
     root HOMEDIRRpublic_html;
 
+    http2 on;
     gzip on;
     etag on;
     gzip_proxied any;
@@ -96,14 +100,16 @@ server {
 
 server {
 
-    listen 0.0.0.0:443 ssl http2;
-    listen [::]:443 ssl http2 ;
+    listen 0.0.0.0:443 ssl;
+    listen [::]:443 ssl;
 
     server_name webmail.DOMAINNAMEE mail.DOMAINNAMEE;
 
     ssl_certificate /etc/letsencrypt/live/DOMAINNAMEE/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/DOMAINNAMEE/privkey.pem;
     add_header Strict-Transport-Security "max-age=HSTSLENTHH; includeSubDomainsHSTSPRELOADD" always;
+
+    http2 on;
 
     location ~ "^/(\.well-known\/|[A-Fa-f0-9]{32}.txt$)" {
         root HOMEDIRRpublic_html;

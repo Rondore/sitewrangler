@@ -7,8 +7,8 @@ limit_req_zone $binary_remote_addr zone=UNDERDOMAINN:1m rate=15r/m;
 
 server {
 
-    listen 0.0.0.0:80 ;
-    listen [::]:80 ;
+    listen 0.0.0.0:80;
+    listen [::]:80;
 
     server_name DOMAINNAMEE www.DOMAINNAMEE;
 
@@ -16,6 +16,7 @@ server {
 
     modsecurity_rules_file "INSTALLPATHHetc/modsec/sites/DOMAINNAMEE";
 
+    http2 on;
     gzip on;
     etag on;
     gzip_proxied any;
@@ -32,8 +33,8 @@ server {
 
 server {
 
-    listen 0.0.0.0:443 ssl http2 ;
-    listen [::]:443 ssl http2 ;
+    listen 0.0.0.0:443 ssl;
+    listen [::]:443 ssl;
 
     server_name DOMAINNAMEE www.DOMAINNAMEE;
 
@@ -44,6 +45,7 @@ server {
 
     modsecurity_rules_file "INSTALLPATHHetc/modsec/sites/DOMAINNAMEE";
 
+    http2 on;
     gzip on;
     etag on;
     gzip_proxied any;
