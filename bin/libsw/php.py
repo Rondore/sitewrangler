@@ -497,7 +497,16 @@ def get_updated_versions(force_refresh=False):
         use_cache = False
 
     if use_cache:
-        return file_filter.get_trimmed_file_as_array(cache_file)
+        cached_versions = file_filter.get_trimmed_file_as_array(cache_file)
+        if settings.get_bool('enable_php_prerelease_version'):
+            return cached_versions
+        else:
+            clean_versions = []
+            regex = re.compile(r'^[0-9\.]*$')
+            for version in cached_versions:
+                if regex.match(version):
+                    clean_versions.append(version)
+            return clean_versions
     else:
         request = requests.get('https://www.php.net/downloads.php')
         regex = re.compile(r'.*/distributions/php-([0-9\.]*)\.tar\.bz2.*')
