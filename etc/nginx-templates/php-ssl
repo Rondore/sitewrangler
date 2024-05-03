@@ -2,18 +2,19 @@
 # User     : USERNAMEE
 # Template : php-ssl
 
-fastcgi_cache_path /usr/local/nginx/cache/USERNAMEE levels=1 keys_zone=USERNAMEE:128m inactive=1h;
+fastcgi_cache_path BUILDPATHHnginx/cache/USERNAMEE levels=1 keys_zone=USERNAMEE:128m inactive=1h;
 
 limit_req_zone $binary_remote_addr zone=UNDERDOMAINN:1m rate=15r/m;
 
 server {
-    listen LOCALIPP:80 ;
-    listen [IPV66]:80 ;
+    listen 0.0.0.0:80;
+    listen [::]:80;
 
     server_name DOMAINNAMEE www.DOMAINNAMEE;
 
     root HOMEDIRRpublic_html;
 
+    http2 on;
     gzip on;
     etag on;
     gzip_proxied any;
@@ -23,7 +24,7 @@ server {
     gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript;
     gzip_vary on;
 
-    modsecurity_rules_file "/opt/sitewrangler/etc/modsec/sites/DOMAINNAMEE";
+    modsecurity_rules_file "INSTALLPATHHetc/modsec/sites/DOMAINNAMEE";
 
     rewrite ^/webmail/?$ https://DOMAINNAMEE:2096/ permanent;
 
@@ -42,11 +43,12 @@ server {
 
 server {
 
-    listen LOCALIPP:80;
-    listen [IPV66]:80 ;
+    listen 0.0.0.0:80;
+    listen [::]:80;
 
     server_name webmail.DOMAINNAMEE mail.DOMAINNAMEE;
 
+    http2 on;
 
     location ~ "^/(\.well-known\/|[A-Fa-f0-9]{32}.txt$)" {
         root HOMEDIRRpublic_html;
@@ -58,14 +60,14 @@ server {
         proxy_set_header Host $http_host;
         proxy_set_header X-Forwarded-Proto $scheme;
 
-        proxy_pass http://LOCALIPP:8080/;
+        proxy_pass http://127.0.0.1:8080/;
     }
 }
 
 server {
 
-    listen LOCALIPP:443 ssl http2 ;
-    listen [IPV66]:443 ssl http2 ;
+    listen 0.0.0.0:443 ssl;
+    listen [::]:443 ssl;
 
     server_name DOMAINNAMEE www.DOMAINNAMEE;
 
@@ -74,6 +76,7 @@ server {
 
     root HOMEDIRRpublic_html;
 
+    http2 on;
     gzip on;
     etag on;
     gzip_proxied any;
@@ -93,7 +96,7 @@ server {
     fastcgi_cache_lock on;
     fastcgi_cache_key "$scheme$request_method$host$request_uri";
 
-    modsecurity_rules_file "/opt/sitewrangler/etc/modsec/sites/DOMAINNAMEE";
+    modsecurity_rules_file "INSTALLPATHHetc/modsec/sites/DOMAINNAMEE";
     index index.html index.htm index.php;
 
     rewrite ^/webmail/?$ https://DOMAINNAMEE:2096/ permanent;
@@ -158,13 +161,15 @@ server {
 
 server {
 
-    listen LOCALIPP:443 ssl http2;
-    listen [IPV66]:443 ssl http2 ;
+    listen 0.0.0.0:443 ssl;
+    listen [::]:443 ssl;
 
     server_name webmail.DOMAINNAMEE mail.DOMAINNAMEE;
 
     ssl_certificate /etc/letsencrypt/live/DOMAINNAMEE/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/DOMAINNAMEE/privkey.pem;
+
+    http2 on;
 
     location ~ "^/(\.well-known\/|[A-Fa-f0-9]{32}.txt$)" {
         root HOMEDIRRpublic_html;
@@ -181,6 +186,6 @@ server {
         proxy_ssl_name $http_host;
         proxy_ssl_server_name on;
         proxy_set_header X-HTTPS 1;
-        proxy_pass http://LOCALIPP:8080/;
+        proxy_pass http://127.0.0.1:8080/;
     }
 }

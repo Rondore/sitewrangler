@@ -10,8 +10,9 @@ import tarfile
 from libsw import logger, builder, openssl, settings, service, user, input_util, file_filter
 
 modsec_exception_dir = settings.get('install_path') + 'etc/modsec/sites/'
-vhost_dir =  '/usr/local/nginx/conf/vhosts/'
-binary_file =  '/usr/local/nginx/sbin/nginx'
+nginx_dir = settings.get('build_path') + 'nginx/'
+vhost_dir = nginx_dir + 'conf/vhosts/'
+binary_file =  nginx_dir + 'sbin/nginx'
 
 def reload():
     """
@@ -125,7 +126,9 @@ def replace_template_line(line, needle, replacement, is_header=False):
             if first_colin != -1:
                 second_colin = line.find(":", first_colin + 1)
                 if second_colin != -1:
-                    line = line[0:second_colin] + line[second_colin:].replace(needle, replacement)
+                    key = line[first_colin+1:second_colin].strip()
+                    if key == needle:
+                        line = line[0:second_colin] + ': ' + replacement + '\n'
                     custom_field = True
     if not custom_field:
         line = line.replace(needle, replacement)
@@ -186,8 +189,12 @@ def populate_default_vhost_variables(username, domain, existing_fields=[]):
     local_ip = settings.get('local_ip')
     public_ip = settings.get('public_ip')
     ip6 = settings.get('ip6')
+    build_path = settings.get('build_path')
+    install_path = settings.get('install_path')
     if not ip6 or ip6 == 'False':
         ip6 = '::'
+    if not local_ip or local_ip == 'False':
+        local_ip = '0.0.0.0'
     if not os.path.exists(modsec_exception_dir):
         os.makedirs(modsec_exception_dir)
     if not os.path.exists(vhost_dir):
@@ -203,6 +210,8 @@ def populate_default_vhost_variables(username, domain, existing_fields=[]):
     existing_fields = append_missing_variable(existing_fields, 'PUBLICIPP', public_ip)
     existing_fields = append_missing_variable(existing_fields, 'IPV66', ip6)
     existing_fields = append_missing_variable(existing_fields, 'MODSECC', modsec)
+    existing_fields = append_missing_variable(existing_fields, 'BUILDPATHH', build_path)
+    existing_fields = append_missing_variable(existing_fields, 'INSTALLPATHH', install_path)
     return existing_fields
 
 def make_vhost(username, domain, template_name='php', template_fields=False):
@@ -444,15 +453,37 @@ def remove_vhost(domain):
         reload()
     return removed
 
-def user_from_domain(domain):
+def get_user_domains(username):
+    """
+    Get domain names associated with a system user.
+
+    Args:
+        username - The system user
+    """
+    enabled_domains = []
+    for domain in enabled_sites():
+        if username == user_from_domain(domain, only='enabled'):
+            enabled_domains.append(domain)
+    disabled_domains = []
+    for domain in disabled_sites():
+        if username == user_from_domain(domain, only='disabled'):
+            disabled_domains.append(domain)
+    return [enabled_domains, disabled_domains]
+
+def user_from_domain(domain, only=False):
     """
     Get the system user associated with a domain based on the contents of the
     domain's nginx vhost file.
 
     Args:
         domain - The domain used in finding the system user
+        only - Limit returned values to sites that are enabled or disabled. Values must be False, 'enabled' or 'disabled'
     """
     vhost = get_vhost_path(domain)
+    if only == 'enabled' and vhost[-9:] == '.disabled':
+        return False
+    if only == 'disabled' and vhost[-9:] != '.disabled':
+        return False
     header_match = re.compile('^#')
     line_match = re.compile('^#\s*User\s*:')
     if os.path.exists(vhost):
@@ -497,18 +528,19 @@ def deploy_environment(log, first_install):
         log - An open log to write to
         first_install - A boolean value indicating if this is the first time this function has been run
     """
-    systemd_file = '/lib/systemd/system/nginx.service'
+    systemd_file = builder.get_systemd_config_path() + 'nginx.service'
+    install_path = settings.get('install_path');
 
     if first_install:
-        #TODO add these lines to /usr/local/nginx/conf/nginx.conf with a FileFilter
-        with open('/usr/local/nginx/conf/nginx.conf', 'w+') as out:
+        #TODO add these lines to /opt/sitewrangler/usr/local/nginx/conf/nginx.conf with a FileFilter
+        with open(nginx_dir + 'conf/nginx.conf', 'w+') as out:
             out.write('''
 user  daemon daemon;
 worker_processes  auto;
 
-error_log  "/usr/local/nginx/logs/error.log";
+error_log  "logs/error.log";
 
-pid        "/usr/local/nginx/logs/nginx.pid";
+pid        "logs/nginx.pid";
 
 events {
     use                 epoll;
@@ -522,20 +554,18 @@ http {
     default_type  application/octet-stream;
     server_names_hash_bucket_size 128;
 
-    client_body_temp_path  "/usr/local/nginx/client_body_temp" 1 2;
-    proxy_temp_path "/usr/local/nginx/proxy_temp" 1 2;
-    fastcgi_temp_path "/usr/local/nginx/fastcgi_temp" 1 2;
-    scgi_temp_path "/usr/local/nginx/scgi_temp" 1 2;
-    uwsgi_temp_path "/usr/local/nginx/uwsgi_temp" 1 2;
+    client_body_temp_path  "client_body_temp" 1 2;
+    proxy_temp_path "proxy_temp" 1 2;
+    fastcgi_temp_path "fastcgi_temp" 1 2;
+    scgi_temp_path "scgi_temp" 1 2;
+    uwsgi_temp_path "uwsgi_temp" 1 2;
 
-    access_log  "/usr/local/nginx/logs/access.log";
+    access_log  "logs/access.log";
 
-    modsecurity on;
-    modsecurity_rules_file "/opt/sitewrangler/etc/modsec/rules.conf";
-
+    modsecurity on;''' + 
+'    modsecurity_rules_file "' + install_path + 'etc/modsec/rules.conf";' +
+'''
     sendfile        on;
-
-    keepalive_timeout  65;
 
     gzip on;
     gzip_http_version 1.1;
@@ -574,9 +604,9 @@ http {
     ssl_ecdh_curve secp384r1;
     ssl_dhparam /etc/ssl/certs/dhparam.pem;
 
-    http2_idle_timeout 5m;
+    keepalive_timeout 5m;
 
-    include /usr/local/nginx/conf/blocklist.conf;
+    include blocklist.conf;
 
     server {
         return 404;
@@ -585,12 +615,12 @@ http {
     ##
     # Virtual Host Configs
     ##
-    include /usr/local/nginx/conf/vhosts/*.conf;
+    include vhosts/*.conf;
 }
 ''')
         new = "    modsecurity on;\n" + \
             "    modsecurity_rules_file " + settings.get('install_path') + "etc/modsec/rules.conf;\n"
-    blockfile = '/usr/local/nginx/conf/blocklist.conf'
+    blockfile = nginx_dir + 'conf/blocklist.conf'
     if not os.path.isfile(blockfile):
         with open(blockfile, 'a+'):
             pass
@@ -606,14 +636,15 @@ http {
             unit_file.write('\n')
             unit_file.write('[Service]\n')
             unit_file.write('Type=forking\n')
-            unit_file.write('PIDFile=/usr/local/nginx/logs/nginx.pid\n')
-            unit_file.write('ExecStartPre=/usr/local/nginx/sbin/nginx -t\n')
-            unit_file.write('ExecStart=/usr/local/nginx/sbin/nginx\n')
-            unit_file.write('ExecReload=/usr/local/nginx/sbin/nginx -s reload\n')
-            unit_file.write('ExecStop=/usr/local/nginx/sbin/nginx -s stop\n')
+            unit_file.write('PIDFile=' + nginx_dir + 'logs/nginx.pid\n')
+            unit_file.write('ExecStartPre=' + binary_file + ' -t\n')
+            unit_file.write('ExecStart=' + binary_file + '\n')
+            unit_file.write('ExecReload=' + binary_file + ' -s reload\n')
+            unit_file.write('ExecStop=' + binary_file + ' -s stop\n')
             unit_file.write('PrivateTmp=true\n')
-            unit_file.write('Restart=always')
-            unit_file.write('RestartSec=3')
+            unit_file.write('Restart=always\n')
+            unit_file.write('RestartSec=3\n')
+            unit_file.write('Environment="LD_LIBRARY_PATH=' + builder.ld_path + '"\n')
             unit_file.write('\n')
             unit_file.write('[Install]\n')
             unit_file.write('WantedBy=multi-user.target\n')
@@ -622,14 +653,18 @@ http {
         service.enable('nginx', log)
         service.start('nginx', log)
 
+    if not os.path.isfile(logrotate_file()):
+        write_logrotate()
+
 
 def check_dhparams():
     """
     Create dhparam if it does not already exist on the system.
     """
     filename = '/etc/ssl/certs/dhparam.pem'
+    build_path = settings.get('build_path');
     if not os.path.exists(filename):
-        subprocess.run(['openssl', 'dhparam', '-dsaparam', '-out', filename, '4096'])
+        subprocess.run(['LD_LIBRARY_PATH=' + builder.ld_path, build_path + 'bin/openssl', 'dhparam', '-dsaparam', '-out', filename, '4096'], env=builder.build_env)
 
 def get_rule_bypass_line(rule_id):
     """
@@ -683,6 +718,30 @@ def get_bypassed_modsec_rules(domain):
                     rules.append(rule_id)
     return rules
 
+def logrotate_file():
+    return settings.get('install_path') + 'etc/logrotate.d/nginx.conf'
+
+def write_logrotate():
+    """
+    Write out a configuration file for logrotated to rotate the global php log
+    files. Also add an include directive that will include all website
+    logrotated files.
+    """
+    install_path = settings.get('install_path')
+    filename = logrotate_file()
+    with open(filename, 'w+') as output:
+        output.write(nginx_dir + 'logs/*.log {\n\
+    weekly\n\
+    rotate 52\n\
+    dateext\n\
+    compress\n\
+    copytruncate\n\
+    missingok\n\
+    postrotate\n\
+	/bin/kill -USR1 `cat ' + nginx_dir + 'logs/nginx.pid 2>/dev/null` 2>/dev/null || true\n\
+    endscript\n\
+}\n\n')
+
 class NginxBuilder(builder.AbstractArchiveBuilder):
     """
     A class to build nginx from source.
@@ -691,7 +750,7 @@ class NginxBuilder(builder.AbstractArchiveBuilder):
         super().__init__('nginx')
 
     def get_installed_version(self):
-        about_text = subprocess.getoutput('/usr/local/nginx/sbin/nginx -v')
+        about_text = subprocess.getoutput(builder.set_sh_ld + binary_file + ' -v')
         match = re.match(r'nginx version: nginx/([0-9\.]*)', about_text)
         if match == None:
             return '0'
@@ -716,8 +775,9 @@ class NginxBuilder(builder.AbstractArchiveBuilder):
         return False
 
     def populate_config_args(self, log, command=['./configure']):
+        build_path = settings.get('build_path');
         ssl_ver = openssl.OpensslBuilder().get_installed_version()
-        command.append('--with-openssl=/usr/local/src/openssl-' + ssl_ver)
+        command.append('--with-openssl=' + build_path + 'src/openssl-' + ssl_ver)
         return super().populate_config_args(log, command)
 
     def get_source_url(self):
@@ -725,15 +785,20 @@ class NginxBuilder(builder.AbstractArchiveBuilder):
 
     def dependencies(self):
         return ['openssl', 'modsec-nginx', 'cache-nginx']
+    
+    def build(self):
+        mod_lib = builder.get_pkg_config_var('modsecurity','libdir')
+        self.build_env = dict(self.build_env, MODSECURITY_LIB=mod_lib, MODSECURITY_INC=builder.build_path + 'include/')
+        return super().build()
 
     def install(self, log):
         first_install = False
-        if not os.path.exists('/usr/local/nginx/conf/nginx.conf'):
+        if not os.path.exists(nginx_dir + 'conf/nginx.conf'):
             first_install = True
         check_dhparams()
         super().install(log)
-        if not os.path.exists('/usr/local/nginx/cache/'):
-            os.mkdir('/usr/local/nginx/cache/')
+        if not os.path.exists(nginx_dir + 'cache/'):
+            os.makedirs(nginx_dir + 'cache/')
         deploy_environment(log, first_install)
 
 class AbstractNginxModuleBuilder(builder.AbstractGitBuilder):

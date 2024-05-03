@@ -1,17 +1,12 @@
 #!/bin/bash
 
-if [ ! -e /usr/local/bin/sw ]; then
-  ln -s /opt/sitewrangler/bin/sitewrangler.py /usr/local/bin/sw
-fi
-
-if [ ! -e /etc/bash_completion.d/sw ]; then
-  echo "complete -C 'sw complete' sw" > /etc/bash_completion.d/sw
-fi
+SW_DIR="$( cd -- "$(dirname "$0")/.." >/dev/null 2>&1 ; pwd -P )"
 
 #TODO allow user to set FQDN for mail server hostname
 mail_hostname=$(hostname)
 #TODO allow user to select main domain to use for non-SNI connections
-non_sni_cert_domain="thegreatdivide.info"
+echo -n "Enter domain to use for non-SNI connections: "
+read non_sni_cert_domain
 
 if [ ! -e /etc/maildomains ]; then
   echo "*: nobody" > /etc/maildomains
@@ -55,23 +50,11 @@ elif [ -e /usr/sbin/pkg ]; then
   else
     /usr/sbin/pkg install -y python36 py36-pip bind914 screen exim dovecot logrotate ca_root_nss logrotate
   fi
-  # MAYBE: rndc-confgen -a
-  ln -s /usr/local/bin/pip-3.6 /usr/local/bin/pip3
-  ln -s /usr/local/bin/python3.6 /usr/local/bin/python3
 fi
 
-echo 'Stage 2: Install Python Dependancies'
+echo 'Stage 2: null'
 
 cd /usr/include
-
-#python
-#$pip install --upgrade pip
-$pip install argcomplete
-$pip install fallocate
-$pip install inquirer
-$pip install python-iptables
-$pip install python-dateutil
-$pip install tabulate
 
 echo 'Stage 3: Add crons'
 
@@ -813,15 +796,12 @@ sed -i 's~\([ \s]*\)mail[ \s]*=[ \s]*maildir:.*$~\1mail = maildir:%{dict:userdb.
 #
 
 echo 'Stage 8: Add master logrotate entry'
-echo 'include /opt/sitewrangler/etc/logrotate.d' > /etc/logrotate.d/sitewrangler.conf
+echo "include $SW_DIR/etc/logrotate.d" > /etc/logrotate.d/sitewrangler.conf
 
 echo 'Stage 8: Add dkim folder to settings'
 # set mail settings
 sw setting set 'dkim_folder' "/etc/$exim/dkim/"
 sw setting set 'exim_folder' "/etc/$exim/"
-
-# enable sysstat
-sed -i 's/^ENABLED=.*/ENABLED="true"/' /etc/default/sysstat
 
 echo 'Stage 9: Start mail services'
 #
@@ -833,6 +813,3 @@ systemctl enable  $exim
 
 service dovecot restart
 service $exim restart
-
-echo -e "/usr/local/lib64\n/usr/local/lib" > /etc/ld.so.conf.d/aa_sitewrangler.conf
-ldconfig

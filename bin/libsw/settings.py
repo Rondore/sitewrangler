@@ -133,6 +133,7 @@ def _get_default_settings():
     """
     return {
         'install_path': '/opt/sitewrangler/',
+        'build_path': '/opt/sitewrangler/usr/',
         'nameserver_one': 'ns1.example.com',
         'nameserver_two': 'ns2.example.com',
         'dns_authority': 'dns-admin.example.com',

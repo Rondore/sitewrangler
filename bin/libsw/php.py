@@ -6,14 +6,11 @@ import os
 import subprocess
 import re
 import requests
-import tarfile
-import datetime
-import stat
 import shutil
 import pwd
 import time
 from shutil import copyfile
-from libsw import logger, curl, file_filter, version, builder, settings, service, system, user, input_util, pecl
+from libsw import logger, file_filter, version, builder, settings, service, system, user, input_util
 
 # enable_legacy_versions = settings.get_bool('enable_php_legacy_versions')
 php80version = '8.0.30' # 04 Aug 2023
@@ -63,6 +60,21 @@ super_legacy_versions = [
     php30version
 ]
 
+build_path = settings.get('build_path')
+
+def php_build_path(sub_version):
+    return build_path + 'php-' + sub_version  + '/'
+
+def php_binary_path(sub_version):
+    return build_path + 'php-' + sub_version  + '/bin/php'
+
+def vhost_path(sub_version):
+    return php_build_path(sub_version) + 'etc/php-fpm.d/'
+
+def get_lib_path(sub_version):
+    dir = subprocess.getoutput(php_binary_path(sub_version)+ '-config --ini-path')
+    return dir + '/'
+
 def restart_service(version, log=logger.Log(False)):
     """
     Restart a given PHP service.
@@ -80,7 +92,7 @@ def get_installed_version(sub_version):
     Args:
         sub_version - The first two numbers in a PHP version
     """
-    return subprocess.getoutput("/opt/php-" + sub_version + "/bin/php -v 2>/dev/null | grep '^PHP " + sub_version + "' | awk '{print $2}'")
+    return subprocess.getoutput(builder.set_sh_ld + php_binary_path(sub_version) + " -v 2>/dev/null | grep '^PHP " + sub_version + "' | awk '{print $2}'")
 
 def get_versions(excluded_array=False):
     """
@@ -138,111 +150,112 @@ def select_updated_version():
         version_cache = inquirer.prompt(questions)['ver']
     return version_cache
 
-def get_enabled_vhost_path(version, domain):
+def get_enabled_vhost_path(version, username):
     """
     Get the path for an enabled PHP vhost file regardless of wether or not it exists.
 
     Args:
         version - The PHP version used in the file path
-        domain - The domain used in the file path
+        username - The system user used in the file path
     """
-    return '/opt/php-' + version + '/etc/php-fpm.d/' + domain + '.conf'
+    return vhost_path(version) + username + '.conf'
 
-def get_disabled_vhost_path(version, domain):
+def get_disabled_vhost_path(version, username):
     """
     Get the path for a disabled PHP vhost file regardless of wether or not it exists.
 
     Args:
         version - The PHP version used in the file path
-        domain - The domain used in the file path
+        username - The system user used in the file path
     """
-    return '/opt/php-' + version + '/etc/php-fpm.d/' + domain + '.conf.disabled'
+    return vhost_path(version) + username + '.conf.disabled'
 
-def get_vhost_path(version, domain):
+def get_vhost_path(version, user):
     """
-    Get the path of the vhost file associated with a domain. If no vhost file is
+    Get the path of the vhost file associated with a system user. If no vhost file is
     found the enabled path is returned.
 
     Args:
         version - The PHP version used in the file path
-        domain - The domain used in the file path
+        user - The system user associated with the vhost file
     """
-    enabled_path = get_enabled_vhost_path(version, domain)
-    disabled_path = get_disabled_vhost_path(version, domain)
+    enabled_path = get_enabled_vhost_path(version, user)
+    disabled_path = get_disabled_vhost_path(version, user)
     if not os.path.exists(enabled_path) and os.path.exists(disabled_path):
         return disabled_path
     return enabled_path
 
-def make_vhost(user, domain, php_version):
+def make_vhost(username, php_version):
     """
     Create a new PHP vhost file and restart the appropriate PHP service.
 
     Args:
-        user - The system user who's home directory stores site files
-        domain - The domain associated with the site
+        username - The system user who's home directory stores site files
         php_version - The PHP version to use
     """
     with open(settings.get('install_path') + 'etc/php-fpm-site', 'r') as template:
-        vhost_path = get_enabled_vhost_path(php_version, domain)
-        vhost_dir = os.path.dirname(vhost_path)
+        vhost_file_path = get_enabled_vhost_path(php_version, username)
+        vhost_dir = os.path.dirname(vhost_file_path)
+        group = user.get_user_group(username)
         if not os.path.exists(vhost_dir):
             os.makedirs(vhost_dir)
-        with open(vhost_path, 'w') as host:
+        with open(vhost_file_path, 'w') as host:
             for line in template:
-                line = line.replace('USERNAME', user, 10000)
+                line = line.replace('USERNAME', username, 10000)
+                line = line.replace('GROUPNAME', group, 10000)
                 host.write(line)
-    add_logrotate_file(domain)
-    print('Created ' + vhost_path)
+    add_logrotate_file(username)
+    print('Created ' + vhost_file_path)
     restart_service(php_version)
-    set_sys_user_version(user, php_version)
+    set_sys_user_version(username, php_version)
 
-def enable_vhost(domain):
+def enable_vhost(username):
     """
     Remove the suffix ".disabled" from a vhost file and restart the appropriate
     PHP service, thereby enabling the site/file.
 
     Args:
-        domain - The domain to enable
+        username - The system user to enable
     """
-    php_version = get_site_version(domain)
+    php_version = get_sys_user_version(username)
     if php_version == False:
         return False
-    source = get_disabled_vhost_path(php_version, domain)
+    source = get_disabled_vhost_path(php_version, username)
     target = source[:-9] # to trim off '.disabled'
     os.rename(source, target)
     restart_service(php_version)
     return True
 
-def disable_vhost(domain):
+def disable_vhost(username):
     """
     Append the suffix ".disabled" to a vhost file and restart the appropriate
     PHP service, thereby disabling the site/file.
 
     Args:
-        domain - The domain to disable
+        username - The system user to disable
     """
-    php_version = get_site_version(domain)
+    php_version = get_sys_user_version(username)
     if php_version == False:
         return False
-    source = get_enabled_vhost_path(php_version, domain)
+    source = get_enabled_vhost_path(php_version, username)
     target = source + '.disabled'
     os.rename(source, target)
     restart_service(php_version)
     return True
 
-def remove_vhost(domain):
+def remove_vhost(username):
     """
-    Delete the PHP vhost file associated with a domain and then restart the
+    Delete the PHP vhost file associated with a user and then restart the
     appropriate PHP service.
 
     Args:
-        domain - Delete the file associated with this domain
+        username - Delete the file associated with this system user
     """
-    php_version = get_site_version(domain)
+    php_version = get_sys_user_version(username)
     if php_version == False:
         return False
-    enabled_path = get_enabled_vhost_path(php_version, domain)
-    disabled_path = get_disabled_vhost_path(php_version, domain)
+    enabled_path = get_enabled_vhost_path(php_version, username)
+    disabled_path = get_disabled_vhost_path(php_version, username)
     removed = False
     if os.path.exists(enabled_path):
         os.remove(enabled_path)
@@ -252,66 +265,43 @@ def remove_vhost(domain):
         removed = True
     if removed:
         restart_service(php_version)
-    remove_logrotate_file(domain)
+    remove_logrotate_file(username)
     return removed
 
-def edit_vhost(domain):
+def edit_vhost(username):
     """
     Allow the user to edit a vhost file with the system text edior, restart the
     appropriate PHP service if modified.
 
     Args:
-        domain - The domain associated with the PHP vhost file
+        username - The username associated with the PHP vhost file
     """
-    php_version = get_site_version(domain)
+    php_version = get_sys_user_version(username)
     if php_version == False:
         return False
-    path = get_vhost_path(php_version, domain)
+    path = get_vhost_path(php_version, username)
     if input_util.edit_file(path):
         print('Restarting php-' + php_version + '-fpm to apply changes.')
         restart_service(php_version)
 
-def user_from_domain(domain, php_version=False):
-    """
-    Get the system user associated with a domain based on the contents of the
-    domain's PHP vhost file.
-
-    Args:
-        domain - The domain used in finding the system user
-        php_version - (optional) The PHP to use to access the vhost file
-    """
-    if php_version == False:
-        php_version = get_site_version(domain)
-    path = get_vhost_path(php_version, domain)
-    with open(path) as vhost:
-        for line in vhost:
-            if line.startswith('listen =') or line.startswith('listen='):
-                path = line.split('=')[1].strip()
-                if ( path.startswith('"') and path.endswith('"') ) \
-                        or ( path.startswith("'") and path.endswith("'") ):
-                    path = path[1:-1]
-                if path.startswith('/home/'):
-                    username = path.split('/')[2]
-                    return username
-    return False
-
-def get_site_version(domain):
+def get_sys_user_version(username):
     """
     Get the PHP version currently in use for a given site.
 
     Args:
-        domain - The domain used in finding the system user
+        username - The system user used in finding the PHP version
     """
     avaliable_versions = get_versions()
     # Search for enabled configuration files
     for ver in avaliable_versions:
-        if os.path.exists('/opt/php-' + ver + '/etc/php-fpm.d/' + domain + '.conf'):
+        if os.path.exists(vhost_path(ver) + username + '.conf'):
             return ver
     # Search for disabled configuration files
     for ver in avaliable_versions:
-        if os.path.exists('/opt/php-' + ver + '/etc/php-fpm.d/' + domain + '.conf.disabled'):
+        if os.path.exists(vhost_path(ver) + username + '.conf.disabled'):
             return ver
     return False
+
 
 def set_sys_user_version(username, version):
     """
@@ -332,16 +322,17 @@ def set_sys_user_version(username, version):
                 target,
                 '# START PHP VERSION PATH',
                 '# END PHP VERSION PATH',
-                'export PATH=/opt/php-' + version + '/bin' + os.pathsep + '$PATH'
+                'export PATH=' + php_build_path(version) + 'bin' + os.pathsep + '$PATH\n' +
+                'alias php=\'LD_LIBRARY_PATH="' + build_path + 'lib64:' + build_path + 'lib" php\'\n' +
+                'alias wp=\'LD_LIBRARY_PATH="' + build_path + 'lib64:' + build_path + 'lib" php ' + build_path + 'wp-cli/wp-cli.phar\'\n'
             ).run()
         link_dir = '/home/' + username + '/.local/bin/'
         link_path = link_dir + 'php'
-        target_path = '/opt/php-' + version + '/bin/php'
         if os.path.exists(link_path):
             os.unlink(link_path)
         if not os.path.exists(link_dir):
             os.makedirs(link_dir)
-        os.symlink(target_path, link_path)
+        os.symlink(php_binary_path(version), link_path)
     finally:
         os.setegid(0)
         os.seteuid(0)
@@ -356,8 +347,9 @@ def get_conf_files():
     avaliable_versions = get_versions()
     sites = []
     for ver in avaliable_versions:
-        for file in glob.glob('/opt/php-' + ver + '/etc/php-fpm.d/*.conf'):
-            sites.append( {"version": ver, "file": file[27:-5], "fullPath": file} )
+        vpath = vhost_path(ver)
+        for file in glob.glob(vpath + '*.conf'):
+            sites.append( {"version": ver, "file": file[len(vpath):-5], "fullPath": file} )
     sites = sorted(sites, key=lambda k: k['file'])
     return sites
 
@@ -371,8 +363,9 @@ def get_disabled_conf_files():
     avaliable_versions = get_versions()
     sites = []
     for ver in avaliable_versions:
-        for file in glob.glob('/opt/php-' + ver + '/etc/php-fpm.d/*.conf.disabled'):
-            sites.append( {"version": ver, "file": file[27:-14], "fullPath": file} )
+        vpath = vhost_path(ver)
+        for file in glob.glob(vpath + '*.conf.disabled'):
+            sites.append( {"version": ver, "file": file[len(vpath):-14], "fullPath": file} )
     sites = sorted(sites, key=lambda k: k['file'])
     return sites
 
@@ -416,19 +409,19 @@ def select_disabled_conf(query_message):
     conf_file_text = inquirer.prompt(questions)['f']
     return sites[display_sites.index(conf_file_text)]
 
-def change_version(domain, old_version, new_version):
+def change_version(username, old_version, new_version):
     """
-    Change the PHP version used for a domain.
+    Change the PHP version used for a given system user.
 
     Args:
-        domain - The domain of the site to change
+        username - The system user of the site to change
         old_version - The current PHP version
         new_version - The PHP version to change the site to
     """
-    if not os.path.exists('/opt/php-' + new_version + '/etc/php-fpm.d/'):
-        os.makedirs('/opt/php-' + new_version + '/etc/php-fpm.d/')
-    os.rename('/opt/php-' + old_version + '/etc/php-fpm.d/' + domain + '.conf', '/opt/php-' + new_version + '/etc/php-fpm.d/' + domain + '.conf')
-    username = user_from_domain(domain)
+    vhost_directory = vhost_path(new_version)
+    if not os.path.exists(vhost_directory):
+        os.makedirs(vhost_directory)
+    os.rename(vhost_path(old_version) + username + '.conf', vhost_directory + username + '.conf')
     set_sys_user_version(username, new_version)
 
     print('Restarting PHP...')
@@ -504,7 +497,16 @@ def get_updated_versions(force_refresh=False):
         use_cache = False
 
     if use_cache:
-        return file_filter.get_trimmed_file_as_array(cache_file)
+        cached_versions = file_filter.get_trimmed_file_as_array(cache_file)
+        if settings.get_bool('enable_php_prerelease_version'):
+            return cached_versions
+        else:
+            clean_versions = []
+            regex = re.compile(r'^[0-9\.]*$')
+            for version in cached_versions:
+                if regex.match(version):
+                    clean_versions.append(version)
+            return clean_versions
     else:
         request = requests.get('https://www.php.net/downloads.php')
         regex = re.compile(r'.*/distributions/php-([0-9\.]*)\.tar\.bz2.*')
@@ -585,7 +587,8 @@ def deploy_environment(versions, log):
         version - The PHP version to setup
         log - An open log to write to
     """
-    bin_path = '/usr/local/bin/php-' + versions['sub']
+    bin_path = build_path + 'bin/php-' + versions['sub']
+    base_path = php_build_path(versions['sub'])
     src_dir = versions['full']
     if '.a.' in src_dir:
         src_dir = src_dir.replace('.a.', 'alpha')
@@ -595,23 +598,24 @@ def deploy_environment(versions, log):
         src_dir = src_dir.replace('.r.', 'rc')
     if '.R.' in src_dir:
         src_dir = src_dir.replace('.R.', 'RC')
-    src_dir = '/usr/local/src/php-' + src_dir + '/'
+    src_dir = build_path + 'src/php-' + src_dir + '/'
     bin_link_exists = os.path.islink(bin_path) or os.path.isfile(bin_path)
     if not bin_link_exists:
-        os.symlink('/opt/php-' + versions['sub'] + '/bin/php', bin_path)
-    copyfile(src_dir + 'php.ini-production', '/opt/php-' + versions['sub'] + '/lib/php.ini')
+        os.symlink(php_binary_path(versions['sub']), bin_path)
+    lib_dir = get_lib_path(versions['sub'])
+    copyfile(src_dir + 'php.ini-production', lib_dir + 'php.ini')
 
-    fpm_conf_name = '/opt/php-' + versions['sub'] + '/etc/php-fpm.conf'
+    fpm_conf_name = base_path + 'etc/php-fpm.conf'
     copyfile(fpm_conf_name + '.default', fpm_conf_name)
     file_filter.ReplaceRegex(fpm_conf_name, re.compile('^;?pid\s+='), 'pid = run/php-fpm.pid\n', 1).run()
-    include_line = 'include=/opt/php-' + versions['sub'] + '/etc/php-fpm.d/*.conf'
+    include_line = 'include=' + vhost_path(versions['sub']) + '*.conf'
     file_filter.AppendUnique(fpm_conf_name, include_line, True).run()
 
     AddPid(fpm_conf_name).run()
 
     write_primary_logrotate()
 
-    systemd_file = '/lib/systemd/system/php-' + versions['sub'] + '-fpm.service'
+    systemd_file = builder.get_systemd_config_path() + 'php-' + versions['sub'] + '-fpm.service'
 
     if os.path.isfile(systemd_file):
         restart_service(versions['sub'], log)
@@ -623,11 +627,12 @@ def deploy_environment(versions, log):
             unit_file.write('\n')
             unit_file.write('[Service]\n')
             unit_file.write('Type=simple\n')
-            unit_file.write('PIDFile=/opt/php-' + versions['sub'] + '/var/run/php-fpm.pid\n')
-            unit_file.write('ExecStart=/opt/php-' + versions['sub'] + '/sbin/php-fpm --nodaemonize --fpm-config /opt/php-' + versions['sub'] + '/etc/php-fpm.conf\n')
+            unit_file.write('PIDFile=' + base_path + 'var/run/php-fpm.pid\n')
+            unit_file.write('ExecStart=' + base_path + 'sbin/php-fpm --nodaemonize --fpm-config ' + base_path + 'etc/php-fpm.conf\n')
             unit_file.write('ExecReload=/bin/kill -USR2 $MAINPID\n')
-            unit_file.write('Restart=always')
-            unit_file.write('RestartSec=3')
+            unit_file.write('Restart=always\n')
+            unit_file.write('RestartSec=3\n')
+            unit_file.write('Environment="LD_LIBRARY_PATH=' + builder.ld_path + '"\n')
             unit_file.write('\n')
             unit_file.write('[Install]\n')
             unit_file.write('WantedBy=multi-user.target\n')
@@ -638,7 +643,8 @@ def deploy_environment(versions, log):
 
         from libsw import firewall
         firewall.writepignore()
-        log.run('lfd', '-r')
+        if os.path.exists('/usr/sbin/lfd'):
+            log.run('lfd', '-r')
 
 def remove_environment(subversion, log):
     """
@@ -652,21 +658,21 @@ def remove_environment(subversion, log):
     log.log('Stopped php-' + subversion + '-fpm')
     service.disable('php-' + subversion + '-fpm')
     log.log('php-' + subversion + '-fpm disabled')
-    binfile = '/usr/local/bin/php-' + subversion
+    binfile = build_path + 'bin/php-' + subversion
     if os.path.exists(binfile):
         os.unlink(binfile)
         log.log('Removed ' + binfile)
-    installpath = '/opt/php-' + subversion + '/'
+    installpath = php_build_path(subversion)
     if os.path.exists(installpath):
         shutil.rmtree(installpath)
         log.log('Deleted ' + installpath)
-    servicefile = '/lib/systemd/system/php-' + subversion + '-fpm.service'
+    servicefile = builder.get_systemd_config_path() + 'php-' + subversion + '-fpm.service'
     if os.path.exists(servicefile):
         os.remove(servicefile)
         log.log('Deleted ' + servicefile)
         service.reload_init()
         log.run(['systemctl','reset-failed','php-' + subversion + '-fpm'])
-    sourcepath = '/usr/local/src/php-' + fullversion + '/'
+    sourcepath = build_path + 'src/php-' + fullversion + '/'
     if os.path.exists(sourcepath):
         shutil.rmtree(sourcepath)
         log.log('Deleted ' + sourcepath)
@@ -681,7 +687,9 @@ def detect_distro_code():
             distro_name == 'ubuntu' ):
         return 'ldb'
     elif ( distro_name == 'centos' or
-            distro_name == 'rhel' ):
+            distro_name == 'rhel' or
+            distro_name == 'rocky' or
+            distro_name[:9] == 'opensuse-'):
         # version = int(system.get_distro_version())
         # if version >= 7:
         #     return 'lrh'
@@ -695,32 +703,31 @@ def detect_distro_code():
     elif distro_name == 'freebsd':
         return 'bsf'
 
-def logrotate_file(domain):
+def logrotate_file(username):
     """
-    Get the logrotate configuration filename associated with a domain.
+    Get the logrotate configuration filename associated with a system user.
 
     Args:
-        domain - The domain name
+        username - The system user
     """
-    return settings.get('install_path') + 'etc/logrotate.d/php-sites/' + domain
+    return settings.get('install_path') + 'etc/logrotate.d/php-sites/' + username
 
-def add_logrotate_file(domain):
+def add_logrotate_file(username):
     """
     Write out a configuration file for logrotated to rotate a website's php log
     files.
 
     Args:
-        domain - The domain name
+        username - The system user
     """
     if not os.path.exists(primary_logrotate_file()):
         write_primary_logrotate()
-    user = user_from_domain(domain)
-    filename = logrotate_file(domain)
+    filename = logrotate_file(username)
     dirpath = os.path.dirname(filename)
     if not os.path.exists(dirpath):
         os.makedirs(dirpath)
     with open(filename, 'w+') as output:
-        output.write('/home/' + user + '/logs/php.*.log {\n\
+        output.write('/home/' + username + '/logs/php.*.log {\n\
   weekly\n\
   rotate 52\n\
   dateext\n\
@@ -729,14 +736,14 @@ def add_logrotate_file(domain):
   missingok\n\
 }')
 
-def remove_logrotate_file(domain):
+def remove_logrotate_file(username):
     """
-    Remove the configuration file for logrotated to a given domain.
+    Remove the configuration file for logrotated to a given system user.
 
     Args:
-        domain - The domain name
+        username - The system user
     """
-    filename = logrotate_file(domain)
+    filename = logrotate_file(username)
     if os.path.exists(filename):
         os.remove(filename)
         return True
@@ -750,9 +757,6 @@ def write_primary_logrotate():
     Write out a configuration file for logrotated to rotate the global php log
     files. Also add an include directive that will include all website
     logrotated files.
-
-    Args:
-        domain - The domain name
     """
     install_path = settings.get('install_path')
     filename = primary_logrotate_file()
@@ -764,7 +768,7 @@ def write_primary_logrotate():
         with open(filename, 'w+') as output:
             output.write('include ' + install_path + 'etc/logrotate.d/php-sites\n\n')
             for version in version_list:
-                output.write('/opt/php-' + version + '/var/log/*.log {\n\
+                output.write(php_build_path(version) + 'var/log/*.log {\n\
   weekly\n\
   rotate 52\n\
   dateext\n\
@@ -772,7 +776,7 @@ def write_primary_logrotate():
   copytruncate\n\
   missingok\n\
   postrotate\n\
-    /bin/kill -USR1 `cat /opt/php-' + version + '/var/run/php-fpm.pid 2>/dev/null` 2>/dev/null || true\n\
+    /bin/kill -USR1 `cat ' + php_build_path(version) + 'var/run/php-fpm.pid 2>/dev/null` 2>/dev/null || true\n\
   endscript\n\
 }\n\n')
 
@@ -806,7 +810,9 @@ class ImapBuilder(builder.AbstractGitBuilder):
         return 'https://github.com/uw-imap/imap.git'
 
     def make(self, log):
-        return log.run(['make', '-l', settings.get('max_build_load'), self.get_distro(), 'IP=6'])
+        with open(build_path + 'src/imap/ip6', 'w'):
+            pass
+        return log.run(['make', '-l', settings.get('max_build_load'), self.get_distro(), 'IP=6'], env=builder.build_env)
 
     def get_distro(self):
         distro = settings.get('imap_distro')
@@ -824,7 +830,7 @@ class ImapBuilder(builder.AbstractGitBuilder):
         if self.distros != False:
             return self.distros
         self.distros = []
-        with open('/usr/local/src/imap/Makefile') as makefile:
+        with open(build_path + 'src/imap/Makefile') as makefile:
             specials = False
             for line in makefile:
                 if specials and len(line.strip()) == 0:
@@ -860,7 +866,7 @@ class ImapBuilder(builder.AbstractGitBuilder):
         pass
 
     def populate_config_args(self, log): # hack: using config methods to call sed in makefile
-        return ['sed', '-i', r's/^\(EXTRAAUTHENTICATORS=\).*$/\1gss/', '/usr/local/src/imap/Makefile']
+        return ['sed', '-i', r's/^\(EXTRAAUTHENTICATORS=\).*$/\1gss/', build_path + 'src/imap/Makefile']
 
     def source_dir(self):
         return self.build_dir + 'imap/'
@@ -868,8 +874,8 @@ class ImapBuilder(builder.AbstractGitBuilder):
     def fetch_source(self, source, log):
         super().fetch_source(source, log)
         target_dir = self.source_dir()
-        log.run(['sed', '-i', r's~SSLLIB=/[^ ]* ~SSLLIB=/usr/local/lib ~', target_dir + 'Makefile'])
-        log.run(['sed', '-i', r's~SSLINCLUDE=/[^ ]* ~SSLINCLUDE=/usr/local/include/openssl ~', target_dir + 'Makefile'])
+        log.run(['sed', '-i', r's~SSLLIB=/[^ ]* ~SSLLIB=' + build_path + r'lib ~', target_dir + 'Makefile'])
+        log.run(['sed', '-i', r's~SSLINCLUDE=/[^ ]* ~SSLINCLUDE=' + build_path + r'include/openssl ~', target_dir + 'Makefile'])
 
     def dependencies(self):
         return ['openssl']
@@ -924,9 +930,12 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         return source
 
     def dependencies(self):
+        from libsw import build_index
         deps = ['openssl', 'uw-imap', 'curl']
         for pecl_builder in get_registered_pecl_builders():
             deps.append(pecl_builder.slug)
+        if 'postgresql' in build_index.enabled_slugs():
+            deps.append('postgresql')
         return deps
 
     # def get_config_arg_file(self):
@@ -969,8 +978,9 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         log.log(self.slug + ' uninstalled')
 
     def uninstall_warnings(self):
-        file_list = glob.glob('/opt/php-' + self.versions['sub'] + '/etc/php-fpm.d/*.conf')
-        file_list.extend(glob.glob('/opt/php-' + self.versions['sub'] + '/etc/php-fpm.d/*.conf.disabled'))
+        vhost_directory = vhost_path(self.versions['sub'])
+        file_list = glob.glob(vhost_directory + '*.conf')
+        file_list.extend(glob.glob(vhost_directory + '*.conf.disabled'))
         if len(file_list) > 0:
             warning = 'There are still enabled/disabled sites for ' + self.slug + ':\n'
             for file in file_list:
@@ -991,12 +1001,16 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
 
 
     def populate_config_args(self, log, command=False):
+        from libsw import build_index
         if command == False:
             command = ['./configure'];
-        command.append('--prefix=/opt/php-' + self.versions['sub'])
+        command.append('--prefix=' + php_build_path(self.versions['sub']))
         command.append('--with-mysql-sock=' + settings.get('mysql_socket'))
         for pecl_builder in get_registered_pecl_builders():
             command.append(pecl_builder.get_php_build_arg())
+        if 'postgresql' in build_index.enabled_slugs():
+            command.append('--with-pgsql=' + build_path + 'pgsql/')
+            command.append('--with-pdo-pgsql=' + build_path + 'pgsql/')
         return super().populate_config_args(log, command)
 
     def source_dir(self):
@@ -1032,7 +1046,7 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         for logname in builder.find_old_build_elements(settings.get('install_path') + 'var/log/build/php-' + self.versions['sub'] + '.', '.log'):
             os.remove(logname)
             log.log("Removed old log file " + logname)
-        for folder in builder.find_old_build_elements('/usr/local/src/php-' + self.versions['sub'] + '.', '/'):
+        for folder in builder.find_old_build_elements(build_path + 'src/php-' + self.versions['sub'] + '.', '/'):
             shutil.rmtree(folder)
             log.log("Removed old source directory " + folder)
 
@@ -1049,7 +1063,7 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         if rebuild_config:
             log.log('Rebuilding PHP configure file to include PECL libraries')
             os.remove(self.source_dir() + 'configure')
-            log.run([self.source_dir() + 'buildconf', '--force'])
+            log.run([self.source_dir() + 'buildconf', '--force'], env=builder.build_env)
         if version.first_is_higher('8.0.9999', self.versions['full']):
             remove_ssl2(log, self.source_dir() + 'ext/openssl/openssl.c')
 

@@ -9,3 +9,6 @@ etc/modsec
 etc/build-config/user
 etc/logrotate.d
 etc/raw-modsec-rulesets
+.venv
+sitewrangler_venv.py
+usr/

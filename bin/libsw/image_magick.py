@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
 import os, subprocess
-from libsw import builder, version
+from libsw import builder, version, settings
+
+build_path = settings.get('build_path')
+binary_path = build_path + 'bin/magick'
 
 class ImageMagickBuilder(builder.AbstractGitBuilder):
-    def __init__(self, build_dir="/usr/local/src/", source_version=False):
+    def __init__(self, build_dir=build_path + 'src/', source_version=False):
         super().__init__('image-magick', build_dir, source_version, branch="main")
 
     def get_source_url(self):
@@ -53,9 +56,7 @@ class ImageMagickBuilder(builder.AbstractGitBuilder):
         return latest_ver + '-' + str(latest_patch)
 
     def version_reference(self):
-        ver = subprocess.getoutput("head -2 '" + self.source_dir() + "ImageMagick.spec' | sed -nr 's/%global[ ]+VERSION[ ]+([0-9\.]*)/\\1/p'")
-        patch = subprocess.getoutput("head -2 '" + self.source_dir() + "ImageMagick.spec' | sed -nr 's/%global[ ]+Patchlevel[ ]+([0-9]*)/\\1/p'")
-        return ver + '-' + patch
+        return subprocess.getoutput(builder.set_sh_ld + binary_path + ' --version | grep "^Version" | sed "s~.*ImageMagick\s\+\([0-9\\.\\-]\\+\\)\\s\\+.*~\\1~"')
 
     def fetch_source(self, source, log):
         self.branch = self._get_latest_tag()

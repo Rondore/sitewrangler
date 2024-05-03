@@ -27,6 +27,17 @@ def get_user_list(include_root=False):
         user_list.insert(0, 'root')
     return user_list
 
+def get_user_group(username, numerical=False):
+    """
+    Get the name of main group that a user belongs to.
+
+    Args:
+        username - The name of the system user
+        numberical - (optional) If True, return the group id instead of group name
+    """
+    if numerical: return subprocess.getoutput("id -g '" + username + "'")
+    return subprocess.getoutput("id -gn '" + username + "'")
+
 def select_user(allow_root=False):
     """
     Have the user select from a list of users with home directories.
@@ -37,7 +48,7 @@ def select_user(allow_root=False):
     user_list = get_user_list(allow_root)
     questions = [
         inquirer.List('u',
-                    message='Select User: ',
+                    message='Select User',
                     choices=user_list
                 )
     ]

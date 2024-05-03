@@ -166,7 +166,7 @@ def unblock_ip(ip_address):
     LiftCsfRules(csf_rules).run()
 
 def writepignore():
-    from libsw import php, version
+    from libsw import php, version, nginx
     import os
     if not os.path.exists('/etc/csf/'):
         # CSF is not installed, skip
@@ -196,12 +196,13 @@ exe:/usr/bin/spamd
 cmd:spamd child
 exe:/usr/bin/freshclam
 exe:/usr/sbin/clamd
-exe:/usr/local/nginx/sbin/nginx
-exe:/usr/local/nginx/sbin/nginx.old
 """
+    ignore += 'exe:' + nginx.binary_file + '\n'
+    ignore += 'exe:' + nginx.binary_file + '.old\n'
+
     for ver in php.get_versions():
         ver = version.get_tree(ver)['sub']
-        ignore += "exe:/opt/php-" + ver + "/sbin/php-fpm\n"
+        ignore += "exe:" + php.php_build_path(ver) + "sbin/php-fpm\n"
     start_text = '# Start Site Wrangler Rules'
     end_text = '# End Site Wrangler Rules'
     filename = '/etc/csf/csf.pignore'

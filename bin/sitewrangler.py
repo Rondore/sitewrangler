@@ -14,7 +14,7 @@ settings.install_path = install_path
 if install_path != settings.get('install_path'):
     settings.set('install_path')
 
-if __name__ == '__main__':
+def run_main():
     count = len(sys.argv)
     if count < 2:
         index.run_help(False)
@@ -36,3 +36,6 @@ if __name__ == '__main__':
             recursion.self_update()
         else:
             index.run_command(primary, secondary, tertiary, more)
+
+if __name__ == '__main__':
+    run_main();

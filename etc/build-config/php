@@ -1,8 +1,6 @@
---with-pdo-pgsql=/usr/local/pgsql
 --enable-mbstring
 --enable-soap
 --enable-calendar
---with-pgsql=/usr/local/pgsql
 --disable-rpath
 --enable-inline-optimization
 --with-bz2
@@ -19,7 +17,7 @@
 --with-fpm-user=daemon
 --with-fpm-group=daemon
 --enable-ftp
---with-imap=/usr/local/src/imap
+--with-imap=SW_BUILD_PATHsrc/imap
 --with-kerberos
 --with-gettext
 --with-xmlrpc

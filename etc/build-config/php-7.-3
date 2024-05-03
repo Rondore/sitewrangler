@@ -6,5 +6,5 @@
 --with-gd
 --with-zlib-dir
 --with-freetype-dir
---with-imap-ssl=/usr/local/include
---with-kerberos=/usr/local/include
+--with-imap-ssl=SW_BUILD_PATHinclude
+--with-kerberos=SW_BUILD_PATHinclude

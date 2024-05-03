@@ -7,15 +7,18 @@ import glob
 import subprocess
 from libsw import logger, version, builder, settings, file_filter
 
+build_path = settings.get('build_path')
+binary_path = build_path + 'bin/curl'
+
 class CurlBuilder(builder.AbstractArchiveBuilder):
     """
     A class to build curl from source.
     """
     def __init__(self):
-        super().__init__('curl', build_dir="/opt/curl/")
+        super().__init__('curl')
 
     def get_installed_version(self):
-        about_text = subprocess.getoutput('/usr/local/bin/curl -V')
+        about_text = subprocess.getoutput(builder.set_sh_ld + binary_path + ' -V')
         match = re.match(r'curl ([0-9\.]*)', about_text)
         if match == None:
             return '0'
@@ -42,29 +45,10 @@ class CurlBuilder(builder.AbstractArchiveBuilder):
     def dependencies(self):
         return ['openssl']
 
-    def install(self, log):
-        super().install(log)
-        deploy_environment(log)
-
-def deploy_environment(log):
-    """
-    Configure the system linker to use the new copy of openssl if the setting
-    'deploy_curl' is set to True.
-
-    Args:
-        log - An open log to write to
-    """
-    if settings.get_bool('deploy_curl'):
-        filename = '/etc/ld.so.conf.d/curl.conf'
-        log.log('Making sure ' + filename + ' exists')
-        ld_filter = file_filter.AppendUnique(filename, libs_path())
-        ld_filter.run()
-    subprocess.run(['ldconfig'])
-
 def libs_path():
     path = settings.get('curl_libs')
     if path == 'unset':
-        paths = ['/usr/local/lib', '/usr/local/lib64']
+        paths = builder.ld_path.split(':')
         at = -1
         while path == 'unset' or not os.path.exists(path + '/libcurl.so'):
             at += 1
@@ -76,9 +60,9 @@ def libs_path():
 
 def get_curl_path():
   """
-  Get the path the current curl binary directory.
+  Get the path the current curl source directory.
   """
-  dirs = glob.glob('/opt/curl/curl-*/')
+  dirs = glob.glob(build_path + 'src/curl-*/')
   dir = False
   for d in dirs:
       if not dir:

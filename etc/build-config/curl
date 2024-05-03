@@ -1,1 +1,2 @@
---with-ssl=/usr/local/
+--prefix=SW_BUILD_PATH
+--with-ssl=SW_BUILD_PATH

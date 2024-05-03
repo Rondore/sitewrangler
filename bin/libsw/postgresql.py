@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-import os
 import re
 import requests
 import subprocess
-from libsw import logger, version, builder
+from libsw import builder, settings
 
 class PostgresqlBuilder(builder.AbstractArchiveBuilder):
     """A class to build PostgreSQL from source."""
@@ -12,7 +11,7 @@ class PostgresqlBuilder(builder.AbstractArchiveBuilder):
         super().__init__('postgresql')
 
     def get_installed_version(self):
-        about_text = subprocess.getoutput('/usr/local/pgsql/bin/postgres -V')
+        about_text = subprocess.getoutput(builder.set_sh_ld + settings.get('build_path') + 'bin/postgres -V')
         match = re.match(r'postgres \(PostgreSQL\) ([0-9\.]*)', about_text)
         if match == None:
             return '0'

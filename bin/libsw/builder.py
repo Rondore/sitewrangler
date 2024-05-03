@@ -13,6 +13,13 @@ from libsw import logger, version, email, settings, file_filter, system
 from abc import ABC, abstractmethod
 
 debug = True
+build_path = settings.get('build_path')
+ld_path = build_path + 'lib64:' + build_path + 'lib'
+ld_flags = '-L' + build_path + 'lib64/ -L' + build_path + 'lib/'
+cpp_flags = '-I' + build_path + 'include/'
+pkg_config_path = build_path + 'lib64/pkgconfig/:' + build_path + 'lib/pkgconfig/'
+build_env = dict(os.environ, LD_LIBRARY_PATH=ld_path, LDFLAGS=ld_flags, CPPFLAGS=cpp_flags, PKG_CONFIG_PATH=pkg_config_path)
+set_sh_ld = 'LD_LIBRARY_PATH=' + ld_path + ' '
 
 def is_frozen(slug):
     """
@@ -88,17 +95,30 @@ def populate_patch_file(file_path, patch_array, log):
                     patch_array.append([name, url])
     return patch_array
 
+def apply_config_arg_variables(dirty_args=[]):
+    clean_args = []
+    variables = [
+        ['SW_BUILD_PATH', build_path],
+        ['SW_INSTALL_PATH', settings.get('install_path')]
+    ]
+    for arg in dirty_args:
+        for name, value in variables:
+            arg = arg.replace(name, value)
+        clean_args.append(arg)
+    return clean_args
+
 class AbstractBuilder(ABC):
     """
     An abstract class to build source packages downloaded from tar files.
     """
-    def __init__(self, slug, build_dir="/usr/local/src/", source_version=False):
+    def __init__(self, slug, build_dir=build_path + 'src/', source_version=False):
         self.slug = slug
         self.source_version = source_version
         self.build_dir = build_dir
         # a dynamic list of builder objects that are dependant upon this software
         # this shold only be populated by a BuildQueue or similar
         self.dependents = []
+        self.build_env = build_env
 
     @abstractmethod
     def get_source_url(self):
@@ -273,7 +293,7 @@ class AbstractBuilder(ABC):
         target_dir = self.source_dir()
         if os.path.exists(target_dir):
             os.chdir(target_dir)
-            log.run(['make', 'install'])
+            log.run(['make', 'install'], env=self.build_env)
             if not settings.get_bool('build_server'):
                 self.clean(log)
         os.chdir(old_pwd)
@@ -296,7 +316,7 @@ class AbstractBuilder(ABC):
             #TODO add nice -19
             make = ['make', '-l', settings.get('max_build_load')]
             make.extend(self.make_args())
-            retval = log.run(make)
+            retval = log.run(make, env=self.build_env)
         os.chdir(old_pwd)
         return retval
 
@@ -330,7 +350,7 @@ class AbstractBuilder(ABC):
         target_dir = self.source_dir()
         if os.path.exists(target_dir):
             os.chdir(target_dir)
-            log.run(['make', 'clean', '-l', settings.get('max_build_load')])
+            log.run(['make', 'clean', '-l', settings.get('max_build_load')], env=self.build_env)
         os.chdir(old_pwd)
 
     def check_build(self):
@@ -365,21 +385,26 @@ class AbstractBuilder(ABC):
             self.run_pre_config(log)
             log.log("Getting config arguments")
             command = self.populate_config_args(log)
+            command = apply_config_arg_variables(command)
+            config_ret_val = 0
             if len(command) > 0:
                 log.log("Running configuration")
                 if debug:
                     log.log('CONFIG: ' + ' '.join(command))
-                log.run(command)
+                config_ret_val = log.run(command, env=self.build_env)
             log.log("Running make")
-            make_ret_val = self.make(log)
-            if make_ret_val != 0: # if not success
-                log.log(self.slug + ' make command failed. (exit code ' + str(make_ret_val) + ') Exiting.')
+            if config_ret_val != 0:
+                log.log(self.slug + ' configure command failed. (exit code ' + str(config_ret_val) + ') Exiting.')
             else:
-                log.log("Installing")
-                self.install(log)
-                log.log("Build completed for " + self.slug + " at " + str(datetime.datetime.now()))
-                success = self.check_build()
-                self.cleanup_old_versions(log)
+                make_ret_val = self.make(log)
+                if make_ret_val != 0: # if not success
+                    log.log(self.slug + ' make command failed. (exit code ' + str(make_ret_val) + ') Exiting.')
+                else:
+                    log.log("Installing")
+                    self.install(log)
+                    log.log("Build completed for " + self.slug + " at " + str(datetime.datetime.now()))
+                    success = self.check_build()
+                    self.cleanup_old_versions(log)
 
         os.chdir(old_pwd)
         if not success:
@@ -528,7 +553,7 @@ class AbstractArchiveBuilder(AbstractBuilder):
             type = 'r:gz'
         tarname = self.build_dir + self.slug + '-' + self.source_version + ext
         if not os.path.exists(self.build_dir):
-            os.mkdir(self.build_dir)
+            os.makedirs(self.build_dir)
         response = requests.get(source)
         with open(tarname, "wb") as f:
             f.write(response.content)
@@ -545,7 +570,7 @@ class AbstractArchiveBuilder(AbstractBuilder):
 
 class AbstractGitBuilder(AbstractBuilder):
     "Abstract class to build source packages."
-    def __init__(self, slug, build_dir="/usr/local/src/", source_version=False, branch='master'):
+    def __init__(self, slug, build_dir=build_path + 'src/', source_version=False, branch='master'):
         self.branch = branch
         super().__init__(slug, build_dir, source_version)
 
@@ -629,3 +654,17 @@ def builder_array_contains_slug(array, slug):
         if builder.slug == slug:
             return True
     return False
+
+def get_systemd_config_path():
+    possibilities = [
+        '/lib/systemd/system/',
+        '/etc/systemd/system/'
+    ]
+    for path in possibilities:
+        if os.path.isdir(path):
+            return path
+    return possibilities[0]
+
+def get_pkg_config_var(package_name, variable):
+    command = 'PKG_CONFIG_PATH="' + pkg_config_path + '" pkg-config "--variable=' + variable + '" "' + package_name + '"'
+    return subprocess.getoutput(command)

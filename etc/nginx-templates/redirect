@@ -7,16 +7,16 @@ limit_req_zone $binary_remote_addr zone=UNDERDOMAINN:1m rate=15r/m;
 
 server {
 
-    listen LOCALIPP:80 ;
-    listen [IPV66]:80 ;
+    listen 0.0.0.0:80;
+    listen [::]:80;
 
     server_name DOMAINNAMEE www.DOMAINNAMEE;
 
-
     root HOMEDIRR/public_html;
 
-    modsecurity_rules_file "/opt/sitewrangler/etc/modsec/sites/DOMAINNAMEE";
+    modsecurity_rules_file "INSTALLPATHHetc/modsec/sites/DOMAINNAMEE";
 
+    http2 on;
     gzip on;
     etag on;
     gzip_proxied any;

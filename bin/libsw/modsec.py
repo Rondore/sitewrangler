@@ -26,6 +26,29 @@ def get_enabled_rulesets():
         names.append(builder.slug)
     return names
 
+def logrotate_file():
+    return settings.get('install_path') + 'etc/logrotate.d/modsecurity.conf'
+
+def write_logrotate():
+    """
+    Write out a configuration file for logrotated to rotate the global php log
+    files. Also add an include directive that will include all website
+    logrotated files.
+    """
+    from libsw import nginx
+    install_path = settings.get('install_path')
+    filename = logrotate_file()
+    with open(filename, 'w+') as output:
+        output.write(settings.get('install_path') + 'var/log/modsec_*.log {\n\
+    rotate 15\n\
+    size=300M\n\
+    missingok\n\
+    compress\n\
+    postrotate\n\
+	/bin/kill -USR1 `cat ' + nginx.nginx_dir + 'logs/nginx.pid 2>/dev/null` 2>/dev/null || true\n\
+    endscript\n\
+}\n\n')
+
 class AbstractRuleset(builder.AbstractBuilder):
     def get_rule_file(self):
         """
@@ -80,7 +103,14 @@ class ModSecurityBuilder(builder.AbstractGitBuilder):
         os.chdir(old_pwd)
 
     def install(self, log):
+        build_path = settings.get('build_path')
         super().install(log)
+        lib_dir = build_path + 'modsecurity/lib'
+        lib64_dir = build_path + 'modsecurity/lib64'
+        if os.path.isdir(lib64_dir) and not os.path.exists(lib_dir):
+            os.symlink(lib64_dir, lib_dir, target_is_directory=True)
+        if not os.path.isfile(logrotate_file()):
+            write_logrotate()
         from libsw import nginx
         nginx.reload()
 
