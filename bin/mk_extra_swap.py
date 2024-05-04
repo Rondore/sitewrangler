@@ -13,7 +13,7 @@ def make_extra_swap():
   elif size[-1] == 'T' or size[-1] == 't': size = float(size[:-1]) * (1024**4)
 
   with open("/swapfile", "w+b") as f:
-    fallocate(f, 0, size)
+    fallocate(f, 0, int(size))
   os.chmod( '/swapfile', 0o600)
   os.system('mkswap /swapfile')
   os.system('swapon /swapfile')
