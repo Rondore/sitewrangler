@@ -1,2 +1,2 @@
 --prefix=SW_BUILD_PATH
---with-ssl=SW_BUILD_PATH
+--with-openssl=SW_BUILD_PATH
