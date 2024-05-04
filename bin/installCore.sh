@@ -16,7 +16,7 @@ if [ -e /usr/bin/apt-get ]; then
     done
   fi
 
-  /usr/bin/apt-get install -y python3-pip sysstat screen bash-completion
+  /usr/bin/apt-get install -y python3-pip python3-venv sysstat screen bash-completion
 elif [ -e /usr/bin/zypper ]; then
   # OpenSUSE
   /usr/bin/zypper --non-interactive install python3 python3-pip sysstat python3-devel logrotate screen
