@@ -37,3 +37,6 @@ class PostgresqlBuilder(builder.AbstractArchiveBuilder):
 
     def get_source_url(self):
         return 'https://ftp.postgresql.org/pub/source/v' + self.source_version + '/postgresql-' + self.source_version + '.tar.bz2'
+
+    def dependencies(self):
+        return ['openssl']
