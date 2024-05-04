@@ -874,7 +874,8 @@ class ImapBuilder(builder.AbstractGitBuilder):
     def fetch_source(self, source, log):
         super().fetch_source(source, log)
         target_dir = self.source_dir()
-        log.run(['sed', '-i', r's~SSLLIB=/[^ ]* ~SSLLIB=' + build_path + r'lib ~', target_dir + 'Makefile'])
+        ssl_lib_dir = builder.get_pkg_config_var('openssl', 'libdir')
+        log.run(['sed', '-i', r's~SSLLIB=/[^ ]* ~SSLLIB=' + ssl_lib_dir + r' ~', target_dir + 'Makefile'])
         log.run(['sed', '-i', r's~SSLINCLUDE=/[^ ]* ~SSLINCLUDE=' + build_path + r'include ~', target_dir + 'Makefile'])
 
     def dependencies(self):
