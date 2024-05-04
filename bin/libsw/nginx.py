@@ -664,7 +664,7 @@ def check_dhparams():
     filename = '/etc/ssl/certs/dhparam.pem'
     build_path = settings.get('build_path');
     if not os.path.exists(filename):
-        subprocess.run(['LD_LIBRARY_PATH=' + builder.ld_path, build_path + 'bin/openssl', 'dhparam', '-dsaparam', '-out', filename, '4096'], env=builder.build_env)
+        subprocess.run([build_path + 'bin/openssl', 'dhparam', '-dsaparam', '-out', filename, '4096'], env=builder.build_env)
 
 def get_rule_bypass_line(rule_id):
     """
