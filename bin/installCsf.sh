@@ -66,9 +66,9 @@ sed -Ei 's~^([ \s]*)MODSEC_LOG[ \s]*=.*~\1MODSEC_LOG = "/opt/sitewrangler/log/mo
 
 sed -Ei 's~^([ \s]*)CUSTOM1_LOG[ \s]*=.*~\1CUSTOM1_LOG = "/var/log/exim4/rejectlog"~' /etc/csf/csf.conf
 
-sed -Ei 's~^([ \s]*)CUSTOM2_LOG[ \s]*=.*~\1CUSTOM2_LOG = "'$SW_DIR'/nginx/logs/error.log"~' /etc/csf/csf.conf
+sed -Ei 's~^([ \s]*)CUSTOM2_LOG[ \s]*=.*~\1CUSTOM2_LOG = "'$SW_DIR'/usr/nginx/logs/error.log"~' /etc/csf/csf.conf
 
-sed -Ei 's~^([ \s]*)CUSTOM3_LOG[ \s]*=.*~\1CUSTOM3_LOG = "'$SW_DIR'/nginx/logs/access.log"~' /etc/csf/csf.conf
+sed -Ei 's~^([ \s]*)CUSTOM3_LOG[ \s]*=.*~\1CUSTOM3_LOG = "'$SW_DIR'/usr/nginx/logs/access.log"~' /etc/csf/csf.conf
 
 echo "Enter the two-letter country code(s) you would like to have access \
 to reading and sending email. See this link for codes: \
