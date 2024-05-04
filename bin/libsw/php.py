@@ -1010,8 +1010,8 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         for pecl_builder in get_registered_pecl_builders():
             command.append(pecl_builder.get_php_build_arg())
         if 'postgresql' in build_index.enabled_slugs():
-            command.append('--with-pgsql=' + build_path + 'pgsql/')
-            command.append('--with-pdo-pgsql=' + build_path + 'pgsql/')
+            command.append('--with-pgsql=' + build_path)
+            command.append('--with-pdo-pgsql=' + build_path)
         return super().populate_config_args(log, command)
 
     def source_dir(self):
