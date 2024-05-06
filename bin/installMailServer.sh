@@ -411,8 +411,8 @@ tls_on_connect_ports = 465
 #.endif
 #tls_privatekey = MAIN_TLS_PRIVATEKEY
 
-tls_certificate = ${if exists{/etc/exim4/ssl/certs/${tls_sni}.pem}{/etc/exim4/ssl/certs/${tls_sni}.pem}{/etc/exim4/ssl/certs/thegreatdivide.info.pem}}
-tls_privatekey = ${if exists{/etc/exim4/ssl/private/${tls_sni}.pem}{/etc/exim4/ssl/private/${tls_sni}.pem}{/etc/exim4/ssl/private/thegreatdivide.info.pem}}
+tls_certificate = ${if exists{/etc/exim4/ssl/certs/${tls_sni}.pem}{/etc/exim4/ssl/certs/${tls_sni}.pem}{/etc/exim4/ssl/certs/NON_SNI_DOMAIN.pem}}
+tls_privatekey = ${if exists{/etc/exim4/ssl/private/${tls_sni}.pem}{/etc/exim4/ssl/private/${tls_sni}.pem}{/etc/exim4/ssl/private/NON_SNI_DOMAIN.pem}}
 
 #.endif
 
@@ -454,6 +454,8 @@ tls_try_verify_hosts = MAIN_TLS_TRY_VERIFY_HOSTS
 
 .endif
 THEEND
+
+sed -i "s/NON_SNI_DOMAIN/$non_sni_cert_domain/g" /etc/exim4/conf.d/main/03_exim4-config_tlsoptions
 
 cat > /etc/exim4/conf.d/main/50_exim4-config_clamav << 'THEEND'
 #################################
