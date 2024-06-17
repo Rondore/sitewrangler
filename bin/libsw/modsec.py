@@ -38,7 +38,7 @@ def write_logrotate():
     from libsw import nginx
     install_path = settings.get('install_path')
     filename = logrotate_file()
-    os.makedirs(os.path.dirname(filename))
+    os.makedirs(os.path.dirname(filename), exist_ok = True)
     with open(filename, 'w+') as output:
         output.write(settings.get('install_path') + 'var/log/modsec_*.log {\n\
     rotate 15\n\
