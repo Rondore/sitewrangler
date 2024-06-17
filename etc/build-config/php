@@ -17,7 +17,6 @@
 --with-fpm-user=daemon
 --with-fpm-group=daemon
 --enable-ftp
---with-imap=SW_BUILD_PATHsrc/imap
 --with-kerberos
 --with-gettext
 --with-xmlrpc

@@ -11,3 +11,4 @@
 --with-freetype-dir
 --with-mcrypt
 --with-imap-ssl
+--with-imap=SW_BUILD_PATHsrc/imap

@@ -1,3 +1,4 @@
 --with-mysqli
 --with-openssl
 --with-curl
+--with-imap=SW_BUILD_PATHsrc/imap
