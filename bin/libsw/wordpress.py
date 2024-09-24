@@ -405,6 +405,7 @@ def run_cli(user, docroot, cli_args):
     """
     Run a command with wp-cli. The arguments should be provided as a string containing the terminal command after "wp"
     """
+    wp_path = settings.get('build_path') + 'wp-cli/wp-cli.phar'
     cli_args = cli_args.replace('\\', '\\\\').replace("'", "\\'").replace('$', '\\$').replace('`', '\\`')
-    command = "su - " + user + " -c '" + builder.set_sh_ld + 'wp --path="' + docroot + '" ' + cli_args + "'"
-    return subprocess.getoutput(command)
+    command = "su - " + user + " -c '" + builder.set_sh_ld + 'php ' + wp_path + ' --path="' + docroot + '" ' + cli_args + "'"
+    return subprocess.getoutput(command, errors=os.devnull)
