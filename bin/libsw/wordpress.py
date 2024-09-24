@@ -366,11 +366,14 @@ def create_one_time_login(domain):
     print('Go to: ' + site_url + 'wp-admin/wp-autologin-' + passname + '.php?pass=' + passcode)
 
 def get_outdated(domain):
+    wp_path = settings.get('build_path') + 'wp-cli/wp-cli.phar'
     docroot = nginx.docroot_from_domain(domain)
     sys_user = nginx.user_from_domain(domain)
-    core = subprocess.getoutput("su - " + sys_user + " -c '" + builder.set_sh_ld + "wp core check-update --path=\"" + docroot + "\" --fields=update_type --format=csv 2>/dev/null | tail -n +2'")
-    themes = subprocess.getoutput("su - " + sys_user + " -c '" + builder.set_sh_ld + "wp theme list --path=\"" + docroot + "\" --update=available --fields=name --format=csv 2>/dev/null | tail -n +2'")
-    plugins =  subprocess.getoutput("su - " + sys_user + " -c '" + builder.set_sh_ld + "wp plugin list --path=\"" + docroot + "\" --update=available --fields=name --format=csv 2>/dev/null | tail -n +2'")
+    command_start = "su - " + sys_user + " -c '" + builder.set_sh_ld + 'php ' + wp_path + " "
+    command_end = " --format=csv 2>/dev/null | tail -n +2'"
+    core = subprocess.getoutput(command_start + "core check-update --path=\"" + docroot + "\" --fields=update_type" + command_end)
+    themes = subprocess.getoutput(command_start + "theme list --path=\"" + docroot + "\" --update=available --fields=name" + command_end)
+    plugins =  subprocess.getoutput(command_start + "plugin list --path=\"" + docroot + "\" --update=available --fields=name" + command_end)
     return [core, themes.splitlines(), plugins.splitlines()]
 
 def get_site_option(sys_user, docroot, option):
