@@ -272,8 +272,8 @@ def clone_site(old_site, new_user, new_domain, db_conn):
     print('Permissions fixed')
     os.system("sed -i 's~" + old_dir + "~" + new_dir + "~g' " + new_dir + "wp-config.php")
     update_config(new_user, db_name, db_user, db_pass)
-    run_cli(sys_user, new_dir, 'search-replace "' + old_site + '" "' + new_domain + '"')
-    run_cli(sys_user, new_dir, 'cache flush')
+    run_cli(new_user, new_dir, 'search-replace "' + old_site + '" "' + new_domain + '"')
+    run_cli(new_user, new_dir, 'cache flush')
     has_cert = cert_try_loop(new_domain, new_user)
     if has_cert:
         nginx.add_ssl_to_site_hosts(new_domain)
