@@ -14,6 +14,7 @@ def _help():
     print('sw build freeze [slug]  # Prevent a software package from updating to a newer version')
     print('sw build (unfreeze|thaw) [slug]  # Allow a software package to update to a newer version')
     print('sw build list(freeze|frozen)  # List software set to not update')
+    print('sw build shell  # Start a shell with environment variables ready to compile')
 index = command_index.CategoryIndex('build', _help)
 
 def _update(force):
@@ -335,3 +336,8 @@ def _disable(slug, more):
         suffix = 'package'
     print('Enabled ' + str(count) + ' ' + suffix)
 index.register_command('disable', _disable, autocomplete=_installed_autocomplete)
+
+def _shell(slug):
+    from libsw import builder
+    builder.start_build_shell()
+index.register_command('shell', _shell)

@@ -668,3 +668,8 @@ def get_systemd_config_path():
 def get_pkg_config_var(package_name, variable):
     command = 'PKG_CONFIG_PATH="' + pkg_config_path + '" pkg-config "--variable=' + variable + '" "' + package_name + '"'
     return subprocess.getoutput(command)
+
+def start_build_shell():
+    shell_env = dict(build_env)
+    init_file = settings.get('install_path') + 'etc/bashrc'
+    subprocess.run(['/usr/bin/env', 'bash', '--init-file', init_file], env=shell_env)
