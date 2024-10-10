@@ -785,11 +785,13 @@ class NginxBuilder(builder.AbstractArchiveBuilder):
 
     def dependencies(self):
         return ['openssl', 'modsec-nginx', 'cache-nginx']
-    
-    def build(self):
+
+    def get_build_env(self):
         mod_lib = builder.get_pkg_config_var('modsecurity','libdir')
-        self.build_env = dict(self.build_env, MODSECURITY_LIB=mod_lib, MODSECURITY_INC=builder.build_path + 'include/')
-        return super().build()
+        nginx_env = dict(super().get_build_env())
+        nginx_env['MODSECURITY_LIB'] = mod_lib
+        nginx_env['MODSECURITY_INC'] = builder.build_path + 'include/'
+        return nginx_env
 
     def install(self, log):
         first_install = False

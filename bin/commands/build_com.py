@@ -339,5 +339,10 @@ index.register_command('disable', _disable, autocomplete=_installed_autocomplete
 
 def _shell(slug):
     from libsw import builder
-    builder.start_build_shell()
+    if(slug == False):
+        builder.start_build_shell()
+    else:
+        from libsw import build_index
+        target = build_index.get_builder(slug)
+        builder.start_build_shell(target)
 index.register_command('shell', _shell)

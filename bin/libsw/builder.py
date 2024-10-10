@@ -118,7 +118,12 @@ class AbstractBuilder(ABC):
         # a dynamic list of builder objects that are dependant upon this software
         # this shold only be populated by a BuildQueue or similar
         self.dependents = []
-        self.build_env = build_env
+
+    def get_build_env(self):
+        """
+        Return the runtime environment variables used to compilethis package
+        """
+        return build_env
 
     @abstractmethod
     def get_source_url(self):
@@ -293,7 +298,7 @@ class AbstractBuilder(ABC):
         target_dir = self.source_dir()
         if os.path.exists(target_dir):
             os.chdir(target_dir)
-            log.run(['make', 'install'], env=self.build_env)
+            log.run(['make', 'install'], env=self.get_build_env())
             if not settings.get_bool('build_server'):
                 self.clean(log)
         os.chdir(old_pwd)
@@ -316,7 +321,7 @@ class AbstractBuilder(ABC):
             #TODO add nice -19
             make = ['make', '-l', settings.get('max_build_load')]
             make.extend(self.make_args())
-            retval = log.run(make, env=self.build_env)
+            retval = log.run(make, env=self.get_build_env())
         os.chdir(old_pwd)
         return retval
 
@@ -350,7 +355,7 @@ class AbstractBuilder(ABC):
         target_dir = self.source_dir()
         if os.path.exists(target_dir):
             os.chdir(target_dir)
-            log.run(['make', 'clean', '-l', settings.get('max_build_load')], env=self.build_env)
+            log.run(['make', 'clean', '-l', settings.get('max_build_load')], env=self.get_build_env())
         os.chdir(old_pwd)
 
     def check_build(self):
@@ -391,7 +396,7 @@ class AbstractBuilder(ABC):
                 log.log("Running configuration")
                 if debug:
                     log.log('CONFIG: ' + ' '.join(command))
-                config_ret_val = log.run(command, env=self.build_env)
+                config_ret_val = log.run(command, env=self.get_build_env())
             log.log("Running make")
             if config_ret_val != 0:
                 log.log(self.slug + ' configure command failed. (exit code ' + str(config_ret_val) + ') Exiting.')
@@ -669,7 +674,9 @@ def get_pkg_config_var(package_name, variable):
     command = 'PKG_CONFIG_PATH="' + pkg_config_path + '" pkg-config "--variable=' + variable + '" "' + package_name + '"'
     return subprocess.getoutput(command)
 
-def start_build_shell():
-    shell_env = dict(build_env)
+def start_build_shell(target=False):
+    shell_env = build_env
+    if(target):
+        shell_env = target.get_build_env()
     init_file = settings.get('install_path') + 'etc/bashrc'
     subprocess.run(['/usr/bin/env', 'bash', '--init-file', init_file], env=shell_env)
