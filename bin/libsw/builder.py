@@ -680,3 +680,8 @@ def start_build_shell(target=False):
         shell_env = target.get_build_env()
     init_file = settings.get('install_path') + 'etc/bashrc'
     subprocess.run(['/usr/bin/env', 'bash', '--init-file', init_file], env=shell_env)
+
+def get_configure_command(target: AbstractBuilder):
+    command = target.populate_config_args(logger.Log())
+    command = apply_config_arg_variables(command)
+    return command
