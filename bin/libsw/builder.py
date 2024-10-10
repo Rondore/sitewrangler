@@ -629,3 +629,17 @@ def builder_array_contains_slug(array, slug):
         if builder.slug == slug:
             return True
     return False
+
+def get_systemd_config_path():
+    possibilities = [
+        '/lib/systemd/system/',
+        '/etc/systemd/system/'
+    ]
+    for path in possibilities:
+        if os.path.isdir(path):
+            return path
+    return possibilities[0]
+
+def get_configure_command(target: AbstractBuilder):
+    command = target.populate_config_args(logger.Log())
+    return command
