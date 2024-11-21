@@ -123,6 +123,22 @@ class RemoveExact(AppendUnique):
 				out_stream.write(line)
 		return found > 0
 
+class SearchReplaceExact(FileFilter):
+	"""Replace strings in a file that match a given string expression."""
+	def __init__(self, filename, needle, replacement, limit=-1):
+		self.needle = needle
+		self.replacement = replacement
+		self.limit = limit
+		super().__init__(filename, True)
+
+	def filter_stream(self, in_stream, out_stream):
+		found = 0
+		for line in in_stream:
+			fixed_line = line.replace(self.needle, self.replacement, self.limit)
+			out_stream.write(fixed_line)
+			if line != fixed_line: found += 1
+		return found > 0
+
 class RemoveRegex(FileFilter):
 	"""Remove a line from a file that matches a given regular expression."""
 	def __init__(self, filename, compiled_regex):
