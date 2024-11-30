@@ -175,9 +175,7 @@ def install_files(sys_user, db_name, db_user, db_password, path=False):
             ' --path="' + path + '"' + \
             ' --dbname="' + db_name + '"' + \
             ' --dbuser="' + db_user + '"' + \
-            ' --dbpass="' + db_password + '"'
-    print(command)
-    os.system(command)
+            ' --dbpass="' + db_password + '"')
 
     # Reset environment
     os.seteuid(whoami)
