@@ -12,7 +12,7 @@ index.register_help('help', _help_help)
 install_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + '/'
 settings.install_path = install_path
 if install_path != settings.get('install_path'):
-    settings.set('install_path')
+    settings.set('install_path', install_path)
 
 if __name__ == '__main__':
     count = len(sys.argv)
