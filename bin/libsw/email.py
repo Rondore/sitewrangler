@@ -396,7 +396,7 @@ class RemoveMailAccount(file_filter.FileFilter):
     def filter_stream(self, in_stream, out_stream):
         removed = False
         for line in in_stream:
-            if line[self.len:] == self.start:
+            if line.startswith(self.start):
                 removed = True
             else:
                 out_stream.write(line)
