@@ -264,12 +264,15 @@ def check_pass(username, password):
 def get_mail_domains():
     """Get an array of all domains registered in the mail system."""
     domains = []
-    with open(settings.get('mail_domain_file')) as file:
-        for line in file:
-            segments = line.split(':')
-            domain = segments[0].strip().lower()
-            if domain != '*':
-                domains.append(domain)
+    try:
+        with open(settings.get('mail_domain_file')) as file:
+            for line in file:
+                segments = line.split(':')
+                domain = segments[0].strip().lower()
+                if domain != '*':
+                    domains.append(domain)
+    except FileNotFoundError:
+        pass
     return sorted(domains)
 
 def select_domain():
@@ -303,11 +306,14 @@ def get_account_from_domain(domain):
         domain - The domain to check
     """
     domain = domain.lower()
-    with open(settings.get('mail_domain_file')) as file:
-        for line in file:
-            segments = line.split(':')
-            if segments[0].strip().lower() == domain:
-                return segments[1].strip()
+    try:
+        with open(settings.get('mail_domain_file')) as file:
+            for line in file:
+                segments = line.split(':')
+                if segments[0].strip().lower() == domain:
+                    return segments[1].strip()
+    except FileNotFoundError:
+        pass
     return False
 
 def configuration_directory(domain, email_user, sys_user=False):
