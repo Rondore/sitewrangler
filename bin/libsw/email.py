@@ -419,7 +419,11 @@ class SetMailDomain(file_filter.AppendUnique):
         domain = domain.lower().strip()
         nix_account = nix_account.strip()
         line = domain + ': ' + nix_account
-        super().__init__(settings.get('mail_domain_file'), line, True, True)
+        file_path = settings.get('mail_domain_file')
+        if not os.path.exists():
+            with open(file_path, '+a') as domain_file:
+                domain_file.write('*: nobody')
+        super().__init__(file_path, line, True, True)
 
 class RemoveMailDomain(file_filter.RemoveRegex):
     """
