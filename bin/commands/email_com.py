@@ -268,9 +268,9 @@ def _sastatus(domain_or_email):
         else:
             print('SpamAssassin flag for ' + dom_or_email + ' is Disabled')
         if user_flag or domain_flag:
-            print('Therefor SpamAssassin is Enabled for ' + dom_or_email)
+            print('Therefore SpamAssassin is Enabled for ' + dom_or_email)
         else:
-            print('Therefor SpamAssassin is Disabled for ' + dom_or_email)
+            print('Therefore SpamAssassin is Disabled for ' + dom_or_email)
 index.register_command('sastatus', _sastatus, autocomplete=_address_or_domain_autocomplete)
 
 def _dkim(domain):
