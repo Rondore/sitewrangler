@@ -394,7 +394,6 @@ class RemoveMailAccount(file_filter.FileFilter):
         super().__init__(settings.get('mail_shadow_file'))
 
     def filter_stream(self, in_stream, out_stream):
-        new_line = self.domain + ': ' + self.account
         removed = False
         for line in in_stream:
             if line[self.len:] == self.start:
