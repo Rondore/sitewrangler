@@ -172,6 +172,27 @@ class ReplaceRegex(FileFilter):
 				out_stream.write(line)
 		return found > 0
 
+class UpdateValue(FileFilter):
+	"""Replace lines in a file that match a given regular expression."""
+	def __init__(self, filename, key:str, value:str, seperator=':'):
+		self.key = key
+		self.value = value
+		self.seperator = seperator
+		super().__init__(filename, True)
+
+	def filter_stream(self, in_stream, out_stream):
+		found = 0
+		for line in in_stream:
+			if line.startswith(self.key + self.seperator):
+				found += 1
+				out_stream.write(self.key + self.seperator + self.value + '\n')
+			elif line.startswith(self.key + ' ' + self.seperator):
+				found += 1
+				out_stream.write(self.key + ' ' + self.seperator + self.value + '\n')
+			else:
+				out_stream.write(line)
+		return found > 0
+
 def get_trimmed_file_as_array(filename, filter=False):
 	"""
 	Gets the contents of a file as an array. Returns false if file is not
