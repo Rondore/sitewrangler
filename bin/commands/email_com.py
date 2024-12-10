@@ -166,7 +166,7 @@ def _setdomain(domain, more):
             sys_user = False
     if sys_user == False:
         sys_user = user.select_user()
-    email.SetMailDomain(domain, sys_user).run()
+    email.add_mail_domain(domain, sys_user)
     if cert.has_cert(domain):
         cert.deploy_exim_domain(domain)
         cert.update_dovecot_ssl()
@@ -177,7 +177,7 @@ def _unsetdomain(domain):
     from libsw import email, cert
     if domain == False:
         domain = email.select_domain()
-    email.RemoveMailDomain(domain).run()
+    email.remove_mail_domain(domain)
     cert.deploy_exim_domain(domain)
     cert.update_dovecot_ssl()
 index.register_command('unsetdomain', _unsetdomain, autocomplete=_domain_autocomplete)

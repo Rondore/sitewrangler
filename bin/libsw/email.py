@@ -408,6 +408,13 @@ class RemoveMailAccount(file_filter.FileFilter):
                 out_stream.write(line)
         return removed
 
+def add_mail_domain(domain: str, nix_account: str):
+    SetMailDomain(domain, nix_account).run()
+    update_dc_hostnames()
+
+def remove_mail_domain(domain: str):
+    RemoveMailDomain(domain).run()
+    update_dc_hostnames()
 
 class SetMailDomain(file_filter.AppendUnique):
     """
@@ -415,14 +422,14 @@ class SetMailDomain(file_filter.AppendUnique):
     for a domain before you can register email addresses for the domain. Use
     this syntax: SetMailDomain('example.com', 'systemuser').run()
     """
-    def __init__(self, domain, nix_account):
+    def __init__(self, domain: str, nix_account: str):
         domain = domain.lower().strip()
         nix_account = nix_account.strip()
         line = domain + ': ' + nix_account
         file_path = settings.get('mail_domain_file')
-        if not os.path.exists():
+        if not os.path.exists(file_path):
             with open(file_path, '+a') as domain_file:
-                domain_file.write('*: nobody')
+                domain_file.write('*: nobody\n')
         super().__init__(file_path, line, True, True)
 
 class RemoveMailDomain(file_filter.RemoveRegex):
@@ -430,10 +437,15 @@ class RemoveMailDomain(file_filter.RemoveRegex):
     A FileFilter that removes the association of a domain with any system user.
     Use this syntax: ('example.com', 'systemuser').run()
     """
-    def __init__(self, domain):
+    def __init__(self, domain: str):
         domain = domain.lower().strip()
         reg = re.compile('^[ \s]*' + domain.replace('.','\.') + '[ \s]*:')
         super().__init__(settings.get('mail_domain_file'), reg)
+
+def update_dc_hostnames():
+    value = "'" + '; '.join(get_mail_domains()) + "'"
+    filename = '/etc/exim4/update-exim4.conf.conf'
+    file_filter.UpdateValue(filename, 'dc_other_hostnames', value, '=').run()
 
 def make_dkim_pair(domain):
     """
