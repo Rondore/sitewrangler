@@ -829,7 +829,12 @@ echo 'Stage 9: Start mail services'
 #
 # (re)start mail services
 #
-systemctl enable spamassassin
+SPAMD="spamd"
+systemctl status spamd &> /dev/null
+if [ "$?" -eq "4" ]; then
+  SPAMD="spamassassin"
+fi
+systemctl enable $SPAMD --now
 systemctl enable dovecot
 systemctl enable  $exim
 
