@@ -544,7 +544,7 @@ class AbstractArchiveBuilder(AbstractBuilder):
         return super().build()
 
 class AbstractGitBuilder(AbstractBuilder):
-    "Abstract class to build source packages."
+    "Abstract class to build packages from a git repository."
     def __init__(self, slug, build_dir="/usr/local/src/", source_version=False, branch='master'):
         self.branch = branch
         super().__init__(slug, build_dir, source_version)
@@ -587,7 +587,8 @@ class AbstractGitBuilder(AbstractBuilder):
         os.chdir(self.build_dir)
         run_command = ['git', 'clone', self.get_source_url()]
         run_command.extend(self.get_clone_args())
-        run_command.extend(['--branch', self.branch])
+        if self.branch:
+            run_command.extend(['--branch', self.branch])
         if log == False:
             subprocess.run(run_command)
         else:
@@ -623,6 +624,53 @@ class AbstractGitBuilder(AbstractBuilder):
         if success:
             success = self.check_build()
         return success, logfile
+
+class AbstractTagBuilder(AbstractGitBuilder):
+    "Abstract class to build packages from a git repository using the latest tag."
+    def __init__(self, slug, build_dir='/usr/local/src/', source_version=False, branch=False):
+        super().__init__(slug, build_dir, source_version, branch)
+
+    def update_needed(self):
+        if is_frozen(self.slug):
+            return False
+        if not os.path.exists(self.source_dir()):
+            return True
+        return self.latest_tag() != self.version_reference()
+
+    def version_reference(self):
+        #TODO get a version number from the installed program instead of the source code
+        checkout_tag = subprocess.getoutput('git describe --exact-match --tags')
+        #print('Current tag: ' + checkout_tag);
+        return checkout_tag
+
+    def latest_tag(self):
+        old_pwd = os.getcwd()
+        os.chdir(self.source_dir())
+        subprocess.run(['git', 'fetch'])
+        tag_list = subprocess.getoutput('git rev-list --tags')
+        block_list = self.tag_blocklist()
+        latest_tag = False
+        for tag in tag_list.splitlines():
+            tag_name = subprocess.getoutput('git describe --tags ' + tag + ' --abbrev=0')
+            if tag_name not in block_list:
+                latest_tag = tag_name
+                break
+        #print('Latest tag: ' + latest_tag);
+        return latest_tag
+
+    def fetch_source(self, source, log):
+        old_pwd = os.getcwd()
+        target_dir = self.source_dir()
+        if os.path.exists(target_dir):
+            os.chdir(target_dir)
+            self.clean(log)
+            log.run(['git', 'checkout', self.branch])
+        else:
+            self.git_init(log)
+        os.chdir(old_pwd)
+
+    def tag_blocklist(self):
+        return []
 
 def builder_array_contains_slug(array, slug):
     for builder in array:

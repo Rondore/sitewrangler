@@ -46,10 +46,10 @@ class AbstractRuleset(builder.AbstractBuilder):
     def rule_output_dir(self):
         return self.rule_output_file()[:-5] + '/'
 
-class ModSecurityBuilder(builder.AbstractGitBuilder):
+class ModSecurityBuilder(builder.AbstractTagBuilder):
     """A class to build ModSecurity from source."""
     def __init__(self):
-        super().__init__('modsec', branch='v3/master')
+        super().__init__('modsec')
 
     # def check_build(self):
     #     check_path = self.source_dir() + 'tools/rules-check/modsec_rules_check-rules-check.o'
@@ -57,7 +57,7 @@ class ModSecurityBuilder(builder.AbstractGitBuilder):
     #     return os.path.exists(check_path)
 
     def get_source_url(self):
-        return 'https://github.com/SpiderLabs/ModSecurity.git'
+        return 'https://github.com/owasp-modsecurity/ModSecurity.git'
 
     def dependencies(self):
         return ['curl', 'maxmind']
@@ -167,14 +167,14 @@ class ModSecurityRulesetBuilder(builder.AbstractBuilder):
     def update_needed(self):
         return False
 
-class OwaspBuilder(builder.AbstractGitBuilder, AbstractRuleset):
+class OwaspBuilder(builder.AbstractTagBuilder, AbstractRuleset):
     """A class to fetch the OWASP ModSecurity rules."""
     def __init__(self):
         branch = settings.get('owasp-modsec-branch')
         super().__init__('modsec-owasp', branch=branch)
 
     def get_source_url(self):
-        return 'https://github.com/SpiderLabs/owasp-modsecurity-crs.git'
+        return 'https://github.com/coreruleset/coreruleset'
 
     def dependencies(self):
         return []
@@ -183,7 +183,10 @@ class OwaspBuilder(builder.AbstractGitBuilder, AbstractRuleset):
         return []
 
     def source_dir(self):
-        return self.build_dir + 'owasp-modsecurity-crs/'
+        return self.build_dir + 'coreruleset/'
+
+    def tag_blocklist(self):
+        return ['nightly']
 
     # def fetch_source(self, source, log):
     #     old_pwd = os.getcwd()
