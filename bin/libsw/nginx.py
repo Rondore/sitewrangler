@@ -803,7 +803,7 @@ class NginxBuilder(builder.AbstractArchiveBuilder):
             os.makedirs(nginx_dir + 'cache/')
         deploy_environment(log, first_install)
 
-class AbstractNginxModuleBuilder(builder.AbstractGitBuilder):
+class AbstractNginxModuleBuilder(builder.AbstractTagBuilder):
     """A class to build the ModSecurity module for nginx from source."""
 
     def install(self, log):
@@ -827,7 +827,7 @@ class ModSecurityNginxBuilder(AbstractNginxModuleBuilder):
         return True # os.path.exists(self.source_dir() + 'tools/rules-check/modsec_rules_check-rules-check.o')
 
     def get_source_url(self):
-        return 'https://github.com/SpiderLabs/ModSecurity-nginx.git'
+        return 'https://github.com/owasp-modsecurity/ModSecurity-nginx.git'
 
     def dependencies(self):
         return ['modsec']
