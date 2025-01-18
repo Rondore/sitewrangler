@@ -631,7 +631,20 @@ class AbstractGitBuilder(AbstractBuilder):
         if os.path.exists(target_dir):
             os.chdir(target_dir)
             self.clean(log)
+            log.log('Checking out branch ' + self.branch)
             log.run(['git', 'pull', 'origin', self.branch])
+            self.fetch_submodules(source, log)
+        else:
+            self.git_init(log)
+        os.chdir(old_pwd)
+
+    def fetch_submodules(self, source, log):
+        old_pwd = os.getcwd()
+        target_dir = self.source_dir()
+        if os.path.exists(target_dir):
+            os.chdir(target_dir)
+            log.run(['git', 'submodule', 'foreach', 'git reset --hard && git checkout . && git clean -fdx'])
+            log.run(['git', 'submodule', 'update', '--init', '--recursive', '--rebase', '--force'])
         else:
             self.git_init(log)
         os.chdir(old_pwd)
@@ -694,7 +707,10 @@ class AbstractTagBuilder(AbstractGitBuilder):
         if os.path.exists(target_dir):
             os.chdir(target_dir)
             self.clean(log)
+            if not self.branch: self.branch = self.latest_tag()
+            log.log('Checking out branch ' + self.branch)
             log.run(['git', 'checkout', self.branch])
+            self.fetch_submodules(source, log)
         else:
             self.git_init(log)
         os.chdir(old_pwd)

@@ -95,14 +95,6 @@ class ModSecurityBuilder(builder.AbstractTagBuilder):
     def source_dir(self):
         return self.build_dir + 'ModSecurity/'
 
-    def fetch_source(self, source, log):
-        old_pwd = os.getcwd()
-        super().fetch_source(source, log)
-        os.chdir(self.source_dir())
-        log.run(['git', 'submodule', 'init'])
-        log.run(['git', 'submodule', 'update'])
-        os.chdir(old_pwd)
-
     def install(self, log):
         build_path = settings.get('build_path')
         super().install(log)
