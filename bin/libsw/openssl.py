@@ -33,14 +33,14 @@ class OpensslBuilder(builder.AbstractArchiveBuilder):
             antimatch = antiregex.search(line)
             if antimatch != None:
                 continue
-            ver = re.sub(r'.*href="openssl-([^"]*)\.tar\.gz".*', r'\1', line)
+            ver = re.sub(r'.*href="https://github.com/openssl/openssl/releases/download/openssl-([^"]*)/openssl-([^"]*)\.tar\.gz".*', r'\1', line)
             if ver[:1].isnumeric(): # skip fips links
                 if(version.first_is_higher(ver, newest)):
                     newest = ver
         return newest
 
     def get_source_url(self):
-        return 'https://www.openssl.org/source/openssl-' + self.source_version + '.tar.gz'
+        return 'https://github.com/openssl/openssl/releases/download/openssl-' + self.source_version + '/openssl-' + self.source_version + '.tar.gz'
 
     def populate_config_args(self, log):
         return super().populate_config_args(log, ['./config'])
