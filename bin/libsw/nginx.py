@@ -573,6 +573,8 @@ http {
     ssl_ciphers 'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256';
     ssl_ecdh_curve secp384r1;
     ssl_dhparam /etc/ssl/certs/dhparam.pem;
+    ssl_session_cache shared:SSL:50m;
+    ssl_session_timeout 5m;
 
     http2_idle_timeout 5m;
 
