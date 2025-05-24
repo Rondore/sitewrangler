@@ -601,7 +601,7 @@ http {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_buffer_size 8k;
     ssl_ciphers 'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256';
-    ssl_ecdh_curve secp384r1;
+    ssl_ecdh_curve X25519MLKEM768:X448:X25519:secp384r1;
     ssl_dhparam /etc/ssl/certs/dhparam.pem;
     ssl_session_cache shared:SSL:50m;
     ssl_session_timeout 5m;
