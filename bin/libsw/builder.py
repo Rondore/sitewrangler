@@ -101,7 +101,7 @@ class AbstractBuilder(ABC):
         self.dependents = []
 
     @abstractmethod
-    def get_source_url(self):
+    def get_source_url(self) -> str:
         """
         This method returns the download path for the software wich often
         includes the version number.
@@ -109,7 +109,7 @@ class AbstractBuilder(ABC):
         pass
 
     @abstractmethod
-    def update_needed(self):
+    def update_needed(self) -> bool:
         """
         Checks to see if an update is needed and returns a boolean indicating if
         it does need an update.
@@ -134,7 +134,7 @@ class AbstractBuilder(ABC):
         """
         pass
 
-    def dependencies(self):
+    def dependencies(self) -> list[str]:
         """
         Returns a list of slugs of the other software this builder relies on.
         """
@@ -660,14 +660,13 @@ class AbstractTagBuilder(AbstractGitBuilder):
         old_pwd = os.getcwd()
         os.chdir(self.source_dir())
         subprocess.run(['git', 'fetch'])
-        tag_list = subprocess.getoutput('git rev-list --tags')
+        tag_list = subprocess.getoutput('git tag -l')
         block_list = self.tag_blocklist()
-        latest_tag = False
+        latest_tag: (str | bool) = False
         for tag in tag_list.splitlines():
-            tag_name = subprocess.getoutput('git describe --tags ' + tag + ' --abbrev=0')
-            if tag_name not in block_list:
-                latest_tag = tag_name
-                break
+            if tag not in block_list and self.tag_is_okay(tag):
+                if not latest_tag or version.first_is_higher(tag, latest_tag):
+                    latest_tag = tag
         #print('Latest tag: ' + latest_tag);
         return latest_tag
 
@@ -687,6 +686,12 @@ class AbstractTagBuilder(AbstractGitBuilder):
 
     def tag_blocklist(self):
         return []
+    
+    def tag_is_okay(self, tag: str) -> bool:
+        if 'rc' in tag.lower(): return False
+        if 'alpha' in tag.lower(): return False
+        if 'beta' in tag.lower(): return False
+        return True
 
 def builder_array_contains_slug(array, slug):
     for builder in array:
