@@ -2,7 +2,7 @@
 
 import re
 
-def first_is_higher(v1, v2, case_insensitive=True):
+def first_is_higher(v1: str, v2: str, case_insensitive=True):
     """
     Return a boolean value to indicate if the first software version number is
     higher than the second.
@@ -11,6 +11,8 @@ def first_is_higher(v1, v2, case_insensitive=True):
         v1 - The first version string to compare
         v2 - The second version string to compare
     """
+    if v1.startswith('v'): v1 = v1[1:]
+    if v2.startswith('v'): v2 = v2[1:]
     v1_split = v1.split('.')
     v2_split = v2.split('.')
     higher = len(v1_split) < len(v2_split)
