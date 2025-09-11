@@ -508,7 +508,7 @@ def get_updated_versions(force_refresh=False):
                     clean_versions.append(version)
             return clean_versions
     else:
-        request = requests.get('https://www.php.net/downloads.php')
+        request = requests.get('https://www.php.net/downloads.php?source=Y')
         regex = re.compile(r'.*/distributions/php-([0-9\.]*)\.tar\.bz2.*')
         for line in request.text.splitlines():
             match = regex.match(line)
