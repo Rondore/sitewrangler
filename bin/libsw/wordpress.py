@@ -221,7 +221,7 @@ def make_site(username, domain, php_version, db_conn):
     bind.make_zone(domain)
     bind.rebuild_zone_index()
     nginx.make_vhost(username, domain)
-    php.make_vhost(username, domain, php_version)
+    php.make_vhost(username, php_version)
     database_name = username[:18]
     database_user = database_name
     database_pass = input_util.random_string()
@@ -252,7 +252,7 @@ def clone_site(old_site, new_user, new_domain, db_conn):
     nginx.make_vhost(new_user, new_domain)
     for rule_id in nginx.get_bypassed_modsec_rules(old_site):
         nginx.bypass_modsec_rule(new_domain, rule_id)
-    php.make_vhost(new_user, new_domain, php_version)
+    php.make_vhost(new_user, php_version)
     db_name = new_user[:18]
     db_user = db_name
     db_pass = input_util.random_string(20, False)
