@@ -4,7 +4,7 @@ import os
 from libsw import php, nginx, user
 
 def make_php_site(user, domain, php_version):
-    php.make_vhost(user, domain, php_version)
+    php.make_vhost(user, php_version)
     nginx.make_vhost(user, domain)
 
 if __name__ == '__main__':
