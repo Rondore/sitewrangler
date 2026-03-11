@@ -9,6 +9,7 @@
 --with-http_realip_module
 --with-http_stub_status_module
 --with-http_v2_module
+--with-stream
 --add-module=SW_BUILD_PATHsrc/ModSecurity-nginx
 --add-module=SW_BUILD_PATHsrc/ngx_cache_purge
 --with-cc-opt=-Wno-error
