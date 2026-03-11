@@ -807,10 +807,10 @@ class ImapBuilder(builder.AbstractGitBuilder):
         return os.path.exists(self.source_dir() + 'tmail/tmail.o')
 
     def get_source_url(self):
-        return 'https://github.com/uw-imap/imap.git'
+        return 'https://salsa.debian.org/holmgren/uw-imap.git'
 
     def make(self, log):
-        with open(build_path + 'src/imap/ip6', 'w'):
+        with open(build_path + 'src/uw-imap/ip6', 'w'):
             pass
         return log.run(['make', '-l', settings.get('max_build_load'), self.get_distro(), 'IP=6'], env=builder.build_env)
 
@@ -830,7 +830,7 @@ class ImapBuilder(builder.AbstractGitBuilder):
         if self.distros != False:
             return self.distros
         self.distros = []
-        with open(build_path + 'src/imap/Makefile') as makefile:
+        with open(build_path + 'src/uw-imap/Makefile') as makefile:
             specials = False
             for line in makefile:
                 if specials and len(line.strip()) == 0:
@@ -866,10 +866,10 @@ class ImapBuilder(builder.AbstractGitBuilder):
         pass
 
     def populate_config_args(self, log): # hack: using config methods to call sed in makefile
-        return ['sed', '-i', r's/^\(EXTRAAUTHENTICATORS=\).*$/\1gss/', build_path + 'src/imap/Makefile']
+        return ['sed', '-i', r's/^\(EXTRAAUTHENTICATORS=\).*$/\1gss/', build_path + 'src/uw-imap/Makefile']
 
     def source_dir(self):
-        return self.build_dir + 'imap/'
+        return self.build_dir + 'uw-imap/'
 
     def fetch_source(self, source, log):
         super().fetch_source(source, log)
@@ -932,7 +932,7 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
 
     def dependencies(self):
         from libsw import build_index
-        deps = ['openssl', 'uw-imap', 'curl']
+        deps = ['openssl', 'curl']
         for pecl_builder in get_registered_pecl_builders():
             deps.append(pecl_builder.slug)
         if 'postgresql' in build_index.enabled_slugs():
@@ -991,8 +991,8 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
             return False
 
     def build(self):
-        if not os.path.exists(self.build_dir + 'imap/c-client/imap4r1.o'):
-            ImapBuilder().build()
+#        if not os.path.exists(self.build_dir + 'imap/c-client/imap4r1.o'):
+#            ImapBuilder().build()
         self.source_version = self.versions['full']
         return super().build()
 

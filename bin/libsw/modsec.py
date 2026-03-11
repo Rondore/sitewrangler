@@ -3,6 +3,7 @@
 import os
 import shutil
 import glob
+import subprocess
 from libsw import builder, settings
 from abc import ABC, abstractmethod
 
@@ -49,6 +50,11 @@ def write_logrotate():
 	/bin/kill -USR1 `cat ' + nginx.nginx_dir + 'logs/nginx.pid 2>/dev/null` 2>/dev/null || true\n\
     endscript\n\
 }\n\n')
+
+def use_libpcre_2():
+    has_three = len(subprocess.getoutput("ldconfig -p | grep 'libpcre\\.so\\.3'")) > 0
+    has_two = len(subprocess.getoutput("ldconfig -p | grep 'libpcre2-'")) > 0
+    return has_two and not has_three
 
 class AbstractRuleset(builder.AbstractBuilder):
     def get_rule_file(self):
@@ -106,6 +112,12 @@ class ModSecurityBuilder(builder.AbstractTagBuilder):
             write_logrotate()
         from libsw import nginx
         nginx.reload()
+
+    def populate_config_args(self, log, command=False):
+        command = super().populate_config_args(log, command)
+        if use_libpcre_2():
+            command.append('--with-pcre2')
+        return command
 
 class ModSecurityRulesetBuilder(builder.AbstractBuilder):
     """A class to compile multiple ModSecurity rulesets into one file."""
