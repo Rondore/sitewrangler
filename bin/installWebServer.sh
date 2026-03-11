@@ -2,6 +2,17 @@
 
 SW_DIR="$( cd -- "$(dirname "$0")/.." >/dev/null 2>&1 ; pwd -P )"
 
+get_apt_first_available() {
+  for name in "$@"; do
+    if apt-cache show "$name" > /dev/null 2>&1; then
+      echo "$name"
+      return 0
+    fi
+  done
+  return 1
+}
+
+
 if [ -e /usr/bin/apt-get ]; then
   # Debian/Ubuntu
   if fuser /var/lib/dpkg/lock &>/dev/null; then
@@ -12,7 +23,9 @@ if [ -e /usr/bin/apt-get ]; then
     done
   fi
 
-  /usr/bin/apt-get install -y gcc make automake autoconf wget git bind9 screen build-essential libfcgi-dev libxml2-dev libbz2-dev libjpeg-dev libpng-dev libfreetype6-dev libxslt1-dev libzip-dev python3-pip libreadline-dev libtool certbot letsencrypt libkrb5-dev libpam0g-dev libmemcached-dev pkg-config mariadb-client mariadb-server libpcre3-dev libsqlite3-dev libonig-dev sysstat clamav clamav-daemon libgd-dev webp libwebp-dev libheif-dev libpsl-dev bison flex
+  LIBPCRE_DEV=$(get_apt_first_available libpcre3-dev libpcre2-dev)
+
+  /usr/bin/apt-get install -y gcc make automake autoconf wget git bind9 screen build-essential libfcgi-dev libxml2-dev libbz2-dev libjpeg-dev libpng-dev libfreetype6-dev libxslt1-dev libzip-dev python3-pip libreadline-dev libtool certbot letsencrypt libkrb5-dev libpam0g-dev libmemcached-dev pkg-config mariadb-client mariadb-server $LIBPCRE_DEV libsqlite3-dev libonig-dev sysstat clamav clamav-daemon libgd-dev webp libwebp-dev libheif-dev libpsl-dev bison flex
   # for php 7.4 libsqlite3-dev libonig-dev
 
   release=$(cat /etc/*release)
