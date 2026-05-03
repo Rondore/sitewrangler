@@ -33,6 +33,8 @@ class OpensslBuilder(builder.AbstractArchiveBuilder):
             antimatch = antiregex.search(line)
             if antimatch != None:
                 continue
+            if line.find('openssl-4.') != -1:
+                continue
             ver = re.sub(r'.*href="https://github.com/openssl/openssl/releases/download/openssl-([^"]*)/openssl-([^"]*)\.tar\.gz".*', r'\1', line)
             if ver[:1].isnumeric(): # skip fips links
                 if(version.first_is_higher(ver, newest)):
