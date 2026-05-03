@@ -45,6 +45,9 @@ class CurlBuilder(builder.AbstractArchiveBuilder):
     def dependencies(self):
         return ['openssl']
 
+    def standalone_container(self):
+        return True
+
 def libs_path():
     path = settings.get('curl_libs')
     if path == 'unset':

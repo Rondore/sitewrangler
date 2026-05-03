@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 import os
+import shlex
 import tarfile
+from types import NoneType
 import requests
 import datetime
 import subprocess
@@ -18,7 +20,9 @@ ld_path = build_path + 'lib64:' + build_path + 'lib'
 ld_flags = '-L' + build_path + 'lib64/ -L' + build_path + 'lib/'
 cpp_flags = '-I' + build_path + 'include/'
 pkg_config_path = build_path + 'lib64/pkgconfig/:' + build_path + 'lib/pkgconfig/'
-build_env = dict(os.environ, LD_LIBRARY_PATH=ld_path, LDFLAGS=ld_flags, CPPFLAGS=cpp_flags, PKG_CONFIG_PATH=pkg_config_path)
+build_env = dict(LD_LIBRARY_PATH=ld_path, LDFLAGS=ld_flags, CPPFLAGS=cpp_flags, PKG_CONFIG_PATH=pkg_config_path)
+if settings.get('build_system') == 'system':
+    build_env = dict(os.environ, LD_LIBRARY_PATH=ld_path, LDFLAGS=ld_flags, CPPFLAGS=cpp_flags, PKG_CONFIG_PATH=pkg_config_path)
 set_sh_ld = 'LD_LIBRARY_PATH=' + ld_path + ' '
 
 def is_frozen(slug):
@@ -119,7 +123,7 @@ class AbstractBuilder(ABC):
         # this shold only be populated by a BuildQueue or similar
         self.dependents = []
 
-    def get_build_env(self):
+    def get_build_env(self) -> dict[str, str]:
         """
         Return the runtime environment variables used to compilethis package
         """
@@ -128,7 +132,7 @@ class AbstractBuilder(ABC):
     @abstractmethod
     def get_source_url(self) -> str:
         """
-        This method returns the download path for the software wich often
+        This method returns the download path for the software which often
         includes the version number.
         """
         pass
@@ -174,6 +178,8 @@ class AbstractBuilder(ABC):
         """
         if version == False:
             version = self.source_version
+        if version == False:
+            print('Error finding version for ' + self.slug)
         return self.build_dir + self.slug + '-' + version + '/'
 
     @abstractmethod
@@ -305,6 +311,15 @@ class AbstractBuilder(ABC):
 
     def make_args(self):
         return []
+    
+    def get_make_commands(self) -> list[str]:
+        """
+        Return commands to build the software.
+        """
+        make_command = 'make'
+        for argument in self.make_args():
+            make_command += ' ' + shlex.quote(argument)
+        return [make_command]
 
     def make(self, log):
         """
@@ -364,8 +379,36 @@ class AbstractBuilder(ABC):
         extra check to make sure the sofware was fetched correctly.
         """
         return True
+    
+    # def get_container_build_commands(self) -> list[str]:
+    #     """
+    #     Generate the commands to compile and install inside a container image.
+    #     """
+    #     commands = []
+    #     for line in self.get_pre_config_commands():
+    #         commands.append(line)
+    #     config = self.populate_config_args(log)
+    #     config = apply_config_arg_variables(config)
+    #     config_ret_val = 0
+    #     if len(config) > 0:
+    #         commands.append(config)
 
-    def build(self):
+    #     for line in self.get_make_commands():
+    #         commands.append(line)
+
+    #     for line in self.get_install_commands():
+    #         commands.append(line)
+
+    #     return commands
+    
+    def run_fetch(self, log: logger.Log):
+        source_url = self.get_source_url()
+        if not is_frozen(self.slug):
+            log.log('Fetching ' + source_url)
+            self.fetch_source(source_url, log)
+            self.apply_patches(log)
+
+    def build(self, log: NoneType | logger.CaptureCommandsLog, is_container=False):
         """
         Download or update the source code, compile it and then install it.
         """
@@ -376,15 +419,15 @@ class AbstractBuilder(ABC):
         if not os.path.exists(logdir):
             os.makedirs(logdir)
         with open(logfile, 'w+') as open_log:
-            log = logger.Log(open_log)
+            if log:
+                log.set_output(open_log)
+            else:
+                log = logger.Log(open_log)
             log.log("Build started for " + self.slug + " at " + str(datetime.datetime.now()))
             if is_frozen(self.slug):
                 log.log("Note: Running rebuild of frozen package")
-            source_url = self.get_source_url()
-            if not is_frozen(self.slug):
-                log.log('Fetching ' + source_url)
-                self.fetch_source(source_url, log)
-                self.apply_patches(log)
+            if not is_container:
+                self.run_fetch(log)
             os.chdir(self.source_dir())
             log.log("Running pre-config")
             self.run_pre_config(log)
@@ -421,7 +464,7 @@ class AbstractBuilder(ABC):
     def update_if_needed(self):
         """Check for updates and then run build() if needed."""
         if self.update_needed():
-            return self.build()
+            return self.build(None, False)
         return False, False
 
     def deploy(self, remote_address, log):
@@ -439,7 +482,7 @@ class AbstractBuilder(ABC):
         #TODO return success
         return True
 
-    def needs_deploy(self, remote_address, log, force=False):
+    def needs_deploy(self, remote_address, log, force=False) -> bool:
         """
         Check if a package needs to be pushed from a buid server to a production server.
         """
@@ -451,7 +494,27 @@ class AbstractBuilder(ABC):
         remote_ver = subprocess.getoutput('ssh root@' + remote_address + ' -t "sw build version ' + self.slug + '" 2>/dev/null').strip()
         # print('L: "' + local_ver + '", R: "' + remote_ver + '"')
         return local_ver != remote_ver
+    
+    def standalone_container(self) -> bool:
+        """
+        Determins if this software package is put into it's own container
+        """
+        return False
+    
+    def system_dependencies(self) -> list[str]:
+        """
+        Get a list of all system packages needed to run the built software (apt install)
+        """
+        return []
+    
+    def add_container_config(self, output):
+        pass
 
+    def get_extra_includes(self):
+        """
+        Get a list of other buiders (slugs) that need their source code copied into the container build
+        """
+        return []
 
 def find_old_build_elements(pre_ver_text, post_ver_text):
     """
@@ -491,6 +554,11 @@ class AbstractArchiveBuilder(AbstractBuilder):
 
     def version_reference(self):
         return self.get_installed_version()
+    
+    def run_fetch(self, log: logger.Log):
+        if not self.source_version:
+            self.source_version = self.get_updated_version()
+        super().run_fetch(log)
 
     @abstractmethod
     def get_updated_version(self):
@@ -545,9 +613,14 @@ class AbstractArchiveBuilder(AbstractBuilder):
         """
         Fetch the source tar file and extract it
         """
+        if not self.source_version:
+            self.source_version = self.get_updated_version()
         ext = ''
         type = ''
-        if source [-7:] == '.tar.gz':
+        if source [-7:] == '.tar.xz':
+            ext = '.tar.xz'
+            type = 'r:xz'
+        elif source [-7:] == '.tar.gz':
             ext = '.tar.gz'
             type = 'r:gz'
         elif source [-8:] == '.tar.bz2':
@@ -557,21 +630,29 @@ class AbstractArchiveBuilder(AbstractBuilder):
             ext = '.tgz'
             type = 'r:gz'
         tarname = self.build_dir + self.slug + '-' + self.source_version + ext
-        if not os.path.exists(self.build_dir):
-            os.makedirs(self.build_dir)
-        response = requests.get(source)
-        with open(tarname, "wb") as f:
-            f.write(response.content)
-        print('')
+        if not os.path.exists(tarname):
+            if not os.path.exists(self.build_dir):
+                os.makedirs(self.build_dir)
+            response = requests.get(source)
+            with open(tarname, "wb") as f:
+                f.write(response.content)
+            print('')
         with tarfile.open(tarname, type) as tar:
             tar.extractall(self.build_dir)
-        os.remove(tarname)
+        #os.remove(tarname)
         #print(tarname)
 
-    def build(self):
+    def build(self, log: NoneType | logger.CaptureCommandsLog, is_container=False):
         if not self.source_version:
             self.source_version = self.updated_version_reference()
-        return super().build()
+        return super().build(log, is_container)
+    
+def get_git_head(builder: AbstractGitBuilder):
+    old_pwd = os.getcwd()
+    os.chdir(builder.source_dir())
+    output = subprocess.getoutput("git rev-parse HEAD")
+    os.chdir(old_pwd)
+    return output
 
 class AbstractGitBuilder(AbstractBuilder):
     "Abstract class to build packages from a git repository."
@@ -636,6 +717,7 @@ class AbstractGitBuilder(AbstractBuilder):
             self.fetch_submodules(source, log)
         else:
             self.git_init(log)
+        self.source_version = get_git_head(self)
         os.chdir(old_pwd)
 
     def fetch_submodules(self, source, log):
@@ -662,11 +744,14 @@ class AbstractGitBuilder(AbstractBuilder):
     #         #os.chdir(target_dir)
     #     os.chdir(old_pwd)
 
-    def build(self):
-        success, logfile = super().build()
+    def build(self, log: NoneType | logger.CaptureCommandsLog, is_container=False):
+        success, logfile = super().build(log, is_container)
         if success:
             success = self.check_build()
         return success, logfile
+    
+    def get_head_file(self):
+        return self.source_dir() + '/.git/ORIG_HEAD'
 
 class AbstractTagBuilder(AbstractGitBuilder):
     "Abstract class to build packages from a git repository using the latest tag."
@@ -712,6 +797,7 @@ class AbstractTagBuilder(AbstractGitBuilder):
             self.fetch_submodules(source, log)
         else:
             self.git_init(log)
+        self.source_version = get_git_head(self)
         os.chdir(old_pwd)
 
     def tag_blocklist(self):

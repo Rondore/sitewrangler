@@ -1,0 +1,3 @@
+--prefix=SW_BUILD_PATH
+--enable-languages=c,c++
+--disable-multilib

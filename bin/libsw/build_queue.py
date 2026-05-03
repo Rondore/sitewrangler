@@ -14,7 +14,7 @@ class BuildQueue():
     run, will only build missing and outdated software.
     """
     def __init__(self, failed_file=default_failed_file):
-        self.queue = []
+        self.queue: list[tuple[builder.AbstractBuilder, str]] = []
         self.failed_file = failed_file
         self.failure_cache = False
 
@@ -23,7 +23,7 @@ class BuildQueue():
         self.failure_cache = False
         self.reset_statuses()
 
-    def append(self, builder):
+    def append(self, builder: builder.AbstractBuilder):
         """
         Add a builder to the queue regardless of weather or not is alread in the
         queue.
@@ -34,7 +34,7 @@ class BuildQueue():
         status = ''
         self.queue.append([builder, status])
 
-    def append_missing(self, builder):
+    def append_missing(self, builder: builder.AbstractBuilder) -> bool:
         """
         Add a builder to the queue only if it is not alread in the queue.
 
@@ -55,7 +55,7 @@ class BuildQueue():
                 if builder.slug in test_builder.dependencies():
                     builder.dependants.append(test_builder)
 
-    def in_failed_state(self, slug):
+    def in_failed_state(self, slug: str) -> bool:
         """
         Check if a builder is marked as having failed a build.
 
@@ -85,13 +85,13 @@ class BuildQueue():
                     fail_list.write(slug + '\n')
 
     # def get_ordered_builders(self):
-    def optimize(self):
+    def optimize(self) -> list[tuple[builder.AbstractBuilder, str]]:
         """
         Get an array of builders ordered so that all packages are preceded by their
         dependencies.
         """
         source_list = []
-        target_list = []
+        target_list: list[tuple[builder.AbstractBuilder, str]] = []
         # for builder_tuple in self.queue:
         #     source_list.append(builder_tuple)
         source_list.extend(self.queue)
@@ -123,13 +123,13 @@ class BuildQueue():
         self.queue = target_list
         return target_list
 
-    def run_check(self):
+    def run_check(self) -> tuple[str, str]:
         """
         Check for updates for all installable software and print the results but
         do not install anthing.
         """
         self.reset_statuses()
-        rebuild_list = []
+        rebuild_list: tuple[str, str] = []
         for i in range(len(self.queue)):
             builder, status = self.queue[i]
             status = self.live_status(builder)
@@ -141,7 +141,7 @@ class BuildQueue():
                 rebuild_list.append([builder.slug, 'depend'])
         return rebuild_list
 
-    def run(self):
+    def run(self) -> int:
         """
         Check for updates for all installable software and install any missing
         sowftware along with any software with an avaliable update.
@@ -179,7 +179,7 @@ class BuildQueue():
             self.queue[i] = builder, status
         return self.count
 
-    def find(self, slug):
+    def find(self, slug) -> builder.AbstractBuilder | False:
         """
         Fetch a builder from the queue.
 
@@ -191,7 +191,7 @@ class BuildQueue():
                 return builder
         return False
 
-    def entry(self, slug):
+    def entry(self, slug) -> tuple[builder.AbstractBuilder, str] | tuple[False, False]:
         """
         Fetch a builder from the queue along with it's build status.
 
@@ -203,7 +203,7 @@ class BuildQueue():
                 return builder, status
         return False, False
 
-    def mark_dependents_failed(self, builder):
+    def mark_dependents_failed(self, builder: builder.AbstractBuilder) -> bool:
         """
         Mark all builders that are dependent upon a builder as failed.
 
@@ -239,7 +239,7 @@ class BuildQueue():
             self._write_failed_file()
         return write
 
-    def failed(self):
+    def failed(self) -> bool:
         """
         Returns True if any builder is in a failed state.
         """
@@ -248,7 +248,7 @@ class BuildQueue():
                 return True
         return False
 
-    def incomplete_count(self):
+    def incomplete_count(self) -> int:
         """
         Returns the number of builders that are still set to install.
         """
@@ -271,7 +271,7 @@ class BuildQueue():
                 status = 'waiting'
             self.queue[i] = builder, status
 
-    def live_status(self, builder, level=0):
+    def live_status(self, builder, level=0) -> str:
         """
         Recalculate the status of a builder by checking it's dependencies.
 

@@ -49,6 +49,24 @@ class OpensslBuilder(builder.AbstractArchiveBuilder):
         super().cleanup_old_versions(log)
         if(int(self.source_version.split('.')[0]) >= 3):
             setup_lib32(log)
+    
+    def system_dependencies(self) -> list[str]:
+        """
+        Get a list of all system packages needed to run the built software (apt install)
+        """
+        return [
+            'libpsl',
+            'libbrotli',
+            'certificates'
+        ]
+    
+    def add_container_config(self, output):
+        # output.write('COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt\n')
+        output.write(r'ENV PATH="/opt/sitewrangler/usr/bin:${PATH}"' + '\n')
+        output.write('ENV LD_LIBRARY_PATH="/opt/sitewrangler/usr/lib64:/opt/sitewrangler/usr/lib"\n')
+
+    def standalone_container(self):
+        return True
 
 def libs_path():
     path = settings.get('openssl_libs')

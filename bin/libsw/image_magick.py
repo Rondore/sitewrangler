@@ -74,3 +74,28 @@ class ImageMagickBuilder(builder.AbstractGitBuilder):
         else:
             log.run(run_command)
         os.chdir(old_pwd)
+    
+    def system_dependencies(self) -> list[str]:
+        """
+        Get a list of all system packages needed to run the built software (apt install)
+        """
+        return [
+            'libjbig',
+            'libtiff',
+            'libpng',
+            'libfontconfig',
+            'libheif',
+            'libwebpmux',
+            'libwebpdemux',
+            'libx11',
+            'libxml',
+            'libzip',
+            'libgomp'
+        ]
+
+    def standalone_container(self):
+        return True
+    
+    def add_container_config(self, output):
+        output.write(r'ENV PATH="/opt/sitewrangler/usr/bin:${PATH}"' + '\n')
+        output.write(r'ENV LD_LIBRARY_PATH="/opt/sitewrangler/usr/lib64:/opt/sitewrangler/usr/lib"' + '\n')

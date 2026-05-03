@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from types import NoneType
+
 import inquirer
 import glob
 import os
@@ -607,7 +609,7 @@ def deploy_environment(versions, log):
 
     fpm_conf_name = base_path + 'etc/php-fpm.conf'
     copyfile(fpm_conf_name + '.default', fpm_conf_name)
-    file_filter.ReplaceRegex(fpm_conf_name, re.compile('^;?pid\s+='), 'pid = run/php-fpm.pid\n', 1).run()
+    file_filter.ReplaceRegex(fpm_conf_name, re.compile('^;?pid\\s+='), 'pid = run/php-fpm.pid\n', 1).run()
     include_line = 'include=' + vhost_path(versions['sub']) + '*.conf'
     file_filter.AppendUnique(fpm_conf_name, include_line, True).run()
 
@@ -797,6 +799,11 @@ def get_status_array():
         statuses.append([subversion, status])
     return statuses
 
+imap_git_path = 'https://salsa.debian.org/holmgren/uw-imap.git'
+imap_git_dir = 'uw-imap'
+# imap_git_path = 'https://github.com/uw-imap/imap.git'
+# imap_git_dir = 'imap'
+
 class ImapBuilder(builder.AbstractGitBuilder):
     """A class to build UW IMAP from source."""
     def __init__(self):
@@ -807,11 +814,10 @@ class ImapBuilder(builder.AbstractGitBuilder):
         return os.path.exists(self.source_dir() + 'tmail/tmail.o')
 
     def get_source_url(self):
-        return 'https://salsa.debian.org/holmgren/uw-imap.git'
+        return imap_git_path
 
     def make(self, log):
-        with open(build_path + 'src/uw-imap/ip6', 'w'):
-            pass
+        log.run(['touch', 'ip6'])
         return log.run(['make', '-l', settings.get('max_build_load'), self.get_distro(), 'IP=6'], env=builder.build_env)
 
     def get_distro(self):
@@ -830,7 +836,7 @@ class ImapBuilder(builder.AbstractGitBuilder):
         if self.distros != False:
             return self.distros
         self.distros = []
-        with open(build_path + 'src/uw-imap/Makefile') as makefile:
+        with open(f'{build_path}src/{imap_git_dir}/Makefile') as makefile:
             specials = False
             for line in makefile:
                 if specials and len(line.strip()) == 0:
@@ -866,20 +872,34 @@ class ImapBuilder(builder.AbstractGitBuilder):
         pass
 
     def populate_config_args(self, log): # hack: using config methods to call sed in makefile
-        return ['sed', '-i', r's/^\(EXTRAAUTHENTICATORS=\).*$/\1gss/', build_path + 'src/uw-imap/Makefile']
+        dir_name = self.slug
+        if not settings.use_containers:
+            dir_name = imap_git_dir
+        return ['sed', '-i',
+            '-e', r's/^\(EXTRAAUTHENTICATORS=\).*$/\1gss/',
+            '-e', r's~SSLLIB=/[^ ]* ~SSLLIB=/opt/sitewrangler/usr/lib64 ~',
+            '-e', r's~SSLINCLUDE=/[^ ]* ~SSLINCLUDE=/opt/sitewrangler/usr/include ~',
+            f'{build_path}src/{dir_name}/Makefile']
 
     def source_dir(self):
-        return self.build_dir + 'uw-imap/'
+        return self.build_dir + imap_git_dir + '/'
 
     def fetch_source(self, source, log):
         super().fetch_source(source, log)
         target_dir = self.source_dir()
         ssl_lib_dir = builder.get_pkg_config_var('openssl', 'libdir')
-        log.run(['sed', '-i', r's~SSLLIB=/[^ ]* ~SSLLIB=' + ssl_lib_dir + r' ~', target_dir + 'Makefile'])
-        log.run(['sed', '-i', r's~SSLINCLUDE=/[^ ]* ~SSLINCLUDE=' + build_path + r'include ~', target_dir + 'Makefile'])
+        if not settings.use_containers:
+            log.run(['sed', '-i', r's~SSLLIB=/[^ ]* ~SSLLIB=' + ssl_lib_dir + r' ~', target_dir + 'Makefile'])
+            log.run(['sed', '-i', r's~SSLINCLUDE=/[^ ]* ~SSLINCLUDE=' + build_path + r'include ~', target_dir + 'Makefile'])
 
     def dependencies(self):
-        return ['openssl']
+        return ['openssl', 'gcc']
+    
+    def system_dependencies(self) -> list[str]:
+        """
+        Get a list of all system packages needed to run the built software (apt install)
+        """
+        return ['krb5', 'libpam']
 
 def get_registered_pecl_builders():
     """Get an array of all PECL builders enabled by the user."""
@@ -891,6 +911,89 @@ def get_registered_pecl_builders():
             p_builder = build_index.get_builder(possible_pecl)
             pecl_builders.append(p_builder)
     return pecl_builders
+
+php_system_dependencies = ['libsqlite', 'libonig', 'libxslt', 'libjpeg', 'libbz2', 'libgd']
+
+class PhpBaseBuilder(builder.AbstractBuilder):
+    """A class to build a base container image that each PHP version can use as a base."""
+    def __init__(self):
+        super().__init__('php-base')
+        self.source_version = '1.0.0'
+
+    def dependencies(self):
+        # return ['openssl', 'curl', 'uw-imap']
+        deps = ['openssl', 'curl', 'uw-imap']
+        from libsw import build_index
+        if 'postgresql' in build_index.enabled_slugs():
+            deps.append('postgresql')
+        return deps
+
+    def get_source_url(self) -> str:
+        """
+        This method returns the download path for the software which often
+        includes the version number.
+        """
+        return ''
+
+    def update_needed(self) -> bool:
+        """
+        Checks to see if an update is needed and returns a boolean indicating if
+        it does need an update.
+        """
+        return False
+
+    def version_reference(self):
+        """
+        A version number that can be compared to a remote build server.
+        """
+        return self.source_version
+
+    def cleanup_old_versions(self, log):
+        """
+        Remove build logs and source folders for older versions of the software
+        build built.
+
+        Args:
+            log - An open log to write to.
+        """
+        pass
+
+    def fetch_source(self, source, log):
+        """
+        Fetch the source code of the software and extracts it if needed.
+
+        Args:
+            source - The source URL
+            log - An open log file or null
+        """
+        os.makedirs(self.source_dir(), exist_ok=True)
+
+    def install(self, log):
+        """
+        Install the software to the system.
+
+        Args:
+            log - An open log file or null
+        """
+        pass
+
+    def make(self, log):
+        """
+        Build the software.
+
+        Args:
+            log - An open log file or null
+        """
+        pass
+
+    def apply_config_arg_variables(dirty_args=[]):
+        return []
+
+    def populate_config_args(self, log, command=False):
+        return []
+    
+    def system_dependencies(self) -> list[str]:
+        return php_system_dependencies
 
 class PhpBuilder(builder.AbstractArchiveBuilder):
     """A class to build PHP from source."""
@@ -931,12 +1034,18 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         return source
 
     def dependencies(self):
+        if not settings.use_containers:
+            from libsw import build_index
+            deps = ['openssl', 'curl']
+            for pecl_builder in get_registered_pecl_builders():
+                deps.append(pecl_builder.slug)
+            if 'postgresql' in build_index.enabled_slugs():
+                deps.append('postgresql')
+            return deps
         from libsw import build_index
-        deps = ['openssl', 'curl']
+        deps = ['php-base']
         for pecl_builder in get_registered_pecl_builders():
             deps.append(pecl_builder.slug)
-        if 'postgresql' in build_index.enabled_slugs():
-            deps.append('postgresql')
         return deps
 
     # def get_config_arg_file(self):
@@ -971,7 +1080,8 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
 
     def install(self, log):
         super().install(log)
-        deploy_environment(self.versions, log)
+        if not settings.use_containers:
+            deploy_environment(self.versions, log)
 
     def uninstall(self, log):
         log.log('Uninstalling ' + self.slug)
@@ -990,11 +1100,11 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         else:
             return False
 
-    def build(self):
+    def build(self, log: NoneType | logger.CaptureCommandsLog, is_container=False):
 #        if not os.path.exists(self.build_dir + 'imap/c-client/imap4r1.o'):
 #            ImapBuilder().build()
         self.source_version = self.versions['full']
-        return super().build()
+        return super().build(log, is_container)
 
     def deploy(self, remote_address, log):
         self.source_version = self.versions['full']
@@ -1042,8 +1152,6 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         return False, False
 
     def cleanup_old_versions(self, log):
-        found = False
-        found_version = False
         for logname in builder.find_old_build_elements(settings.get('install_path') + 'var/log/build/php-' + self.versions['sub'] + '.', '.log'):
             os.remove(logname)
             log.log("Removed old log file " + logname)
@@ -1064,9 +1172,18 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         if rebuild_config:
             log.log('Rebuilding PHP configure file to include PECL libraries')
             os.remove(self.source_dir() + 'configure')
-            log.run([self.source_dir() + 'buildconf', '--force'], env=builder.build_env)
+            if settings.use_containers:
+                log.run(['./buildconf', '--force'], env=builder.build_env)
+            else:
+                log.run([self.source_dir() + 'buildconf', '--force'], env=builder.build_env)
         if version.first_is_higher('8.0.9999', self.versions['full']):
             remove_ssl2(log, self.source_dir() + 'ext/openssl/openssl.c')
+
+    def standalone_container(self):
+        return True
+    
+    def system_dependencies(self) -> list[str]:
+        return php_system_dependencies
 
 def is_same_subversion(versions, version_string):
     """Determine if two versions have the same first two numbers."""

@@ -96,7 +96,7 @@ class ModSecurityBuilder(builder.AbstractTagBuilder):
     #     log.run(['make', 'install'])
 
     def run_pre_config(self, log):
-        log.run([self.source_dir() + 'build.sh'])
+        log.run(['./build.sh'])
 
     def source_dir(self):
         return self.build_dir + 'ModSecurity/'

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from libsw import build_index, curl, openssl, php, postgresql, image_magick, pecl_imagick, pecl_memcached, pecl_redis
+from libsw import build_index, curl, openssl, php, postgresql, image_magick, pecl_imagick, pecl_memcached, pecl_redis, gcc
 
 index = build_index.Index()
 index.register_builder( openssl.OpensslBuilder() )
@@ -11,5 +11,7 @@ index.register_builder( image_magick.ImageMagickBuilder() )
 index.register_builder( pecl_imagick.ImagickBuilder() )
 index.register_builder( pecl_memcached.MemcachedBuilder() )
 index.register_builder( pecl_redis.RedisBuilder() )
+index.register_builder( gcc.GccBuilder() )
+index.register_builder( php.PhpBaseBuilder() )
 for version in php.get_updated_versions():
     index.register_builder( php.PhpBuilder(version) )

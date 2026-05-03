@@ -39,3 +39,15 @@ class PostgresqlBuilder(builder.AbstractArchiveBuilder):
 
     def dependencies(self):
         return ['openssl']
+    
+    def system_dependencies(self) -> list[str]:
+        """
+        Get a list of all system packages needed to run the built software (apt install)
+        """
+        return [
+            'libicu',
+            'libreadline'
+        ]
+
+    def standalone_container(self):
+        return True

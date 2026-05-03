@@ -528,6 +528,9 @@ def deploy_environment(log, first_install):
         log - An open log to write to
         first_install - A boolean value indicating if this is the first time this function has been run
     """
+    if settings.use_containers:
+        #TODO add config file builder for container deployment
+        return
     systemd_file = builder.get_systemd_config_path() + 'nginx.service'
     install_path = settings.get('install_path');
 
@@ -779,7 +782,10 @@ class NginxBuilder(builder.AbstractArchiveBuilder):
     def populate_config_args(self, log, command=['./configure']):
         build_path = settings.get('build_path');
         ssl_ver = openssl.OpensslBuilder().get_installed_version()
-        command.append('--with-openssl=' + build_path + 'src/openssl-' + ssl_ver)
+        if settings.use_containers:
+            command.append('--with-openssl=/opt/sitewrangler/usr/src/openssl')
+        else:
+            command.append('--with-openssl=' + build_path + 'src/openssl-' + ssl_ver)
         return super().populate_config_args(log, command)
 
     def get_source_url(self):
@@ -787,12 +793,26 @@ class NginxBuilder(builder.AbstractArchiveBuilder):
 
     def dependencies(self):
         return ['openssl', 'modsec-nginx', 'cache-nginx']
+    
+    def system_dependencies(self) -> list[str]:
+        """
+        Get a list of all system packages needed to run the built software (apt install)
+        """
+        return [
+            'libpsl',
+            'libbrotli',
+            'libxml',
+            'libpcre'
+        ]
 
     def get_build_env(self):
         mod_lib = builder.get_pkg_config_var('modsecurity','libdir')
+        modsec_include = '/opt/sitewrangler/usr/include/'
+        if not settings.use_containers:
+            modsec_include = builder.build_path + 'include/'
         nginx_env = dict(super().get_build_env())
         nginx_env['MODSECURITY_LIB'] = mod_lib
-        nginx_env['MODSECURITY_INC'] = builder.build_path + 'include/'
+        nginx_env['MODSECURITY_INC'] = modsec_include
         return nginx_env
 
     def install(self, log):
@@ -801,9 +821,28 @@ class NginxBuilder(builder.AbstractArchiveBuilder):
             first_install = True
         check_dhparams()
         super().install(log)
-        if not os.path.exists(nginx_dir + 'cache/'):
-            os.makedirs(nginx_dir + 'cache/')
+        if settings.use_containers:
+            log.run(['mkdir', '-p', '/opt/sitewrangler/usr/nginx/cache/'])
+        else:
+            if not os.path.exists(nginx_dir + 'cache/'):
+                os.makedirs(nginx_dir + 'cache/')
         deploy_environment(log, first_install)
+
+    def standalone_container(self):
+        return True
+
+    def get_extra_includes(self):
+        return ['openssl']
+    
+    def add_container_config(self, output):
+        output.write(r'ENV PATH="/opt/sitewrangler/usr/nginx/sbin:${PATH}"' + '\n')
+        output.write('COPY entrypoint.sh /opt/sitewrangler/usr/nginx/sbin/entrypoint.sh\n')
+        #output.write('ENTRYPOINT /opt/sitewrangler/usr/nginx/sbin/entrypoint.sh\n')
+        output.write("CMD nginx -g 'daemon off;'\n")
+
+    def apply_patches(self, log):
+        install_path = settings.get('install_path')
+        log.run(['cp', install_path + '/bin/bash/nginx-entrypoint.sh', install_path + '/var/cache/container-build/nginx/entrypoint.sh'])
 
 class AbstractNginxModuleBuilder(builder.AbstractTagBuilder):
     """A class to build the ModSecurity module for nginx from source."""
@@ -853,3 +892,9 @@ class NginxCacheBuilder(AbstractNginxModuleBuilder):
 
     def source_dir(self):
         return self.build_dir + 'ngx_cache_purge/'
+    
+    def make(self, log: logger.Log):
+        if settings.use_containers:
+            log.run(['export', 'MODSECURITY_LIB=/opt/sitewrangler/usr/lib'])
+            log.run(['export', 'MODSECURITY_INC=/opt/sitewrangler/usr/include'])
+        return super().make(log)

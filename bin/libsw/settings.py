@@ -154,6 +154,7 @@ def _get_default_settings():
 
         'deploy_openssl': False,
         'deploy_curl': False,
+        'build_system': 'podman',
         'build_cache_age': 43200,
 
         'enable_php_legacy_versions': False,
@@ -173,3 +174,5 @@ def _get_default_settings():
 
         'swap_size': '1.5G'
     }
+
+use_containers = get('build_system') != 'system'

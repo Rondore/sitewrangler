@@ -10,6 +10,6 @@
 --with-http_stub_status_module
 --with-http_v2_module
 --with-stream
---add-module=SW_BUILD_PATHsrc/ModSecurity-nginx
---add-module=SW_BUILD_PATHsrc/ngx_cache_purge
+--add-module=SW_BUILD_PATHsrc/modsec-nginx
+--add-module=SW_BUILD_PATHsrc/cache-nginx
 --with-cc-opt=-Wno-error

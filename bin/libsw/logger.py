@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import shlex
 import subprocess
 
 class Log():
@@ -56,3 +57,25 @@ class Log():
             print(line)
         if self.open_log_file:
             self.open_log_file.write(line + '\n')
+
+class CaptureCommandsLog(Log):
+    def __init__(self, open_log_file=False):
+        super().__init__(open_log_file)
+        self.commands: list[str] = []
+
+    def run(self, command, print_log=False, env=False):
+        if len(command) == 0:
+            return 0
+        if type(command) == str:
+            self.commands.append(command)
+        elif type(command) == list:
+            text = ''
+            for element in command:
+                if len(text) > 0:
+                    text += ' '
+                text += shlex.quote(element)
+            self.commands.append(text)
+        return 0
+    
+    def set_output(self, file):
+        self.open_log_file = file
