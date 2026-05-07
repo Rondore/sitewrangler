@@ -144,7 +144,7 @@ def write_vhost_with_variables(open_template_file, open_vhost_file, variable_arr
         variable_array - Template values stored as [name, value] within a parent array
     """
     header = True
-    header_needle = re.compile('^#')
+    header_needle = re.compile(r'^#')
     for line in open_template_file:
         if header:
             if header_needle.search(line) == None:
@@ -264,13 +264,13 @@ def get_vhost_headers(file_path):
     domain = ''
     template = ''
     fields = []
-    field_needle = re.compile('^# Field')
-    field_header_extract = re.compile('(.*:\s*)(\S+)(\s*:\s*)(.*)')
+    field_needle = re.compile(r'^# Field')
+    field_header_extract = re.compile(r'(.*:\s*)(\S+)(\s*:\s*)(.*)')
 
-    user_needle = re.compile('^# User')
-    domain_needle = re.compile('^# Domain')
-    template_needle = re.compile('^# Template')
-    header_extract = re.compile('(.*:\s*)(.*)')
+    user_needle = re.compile(r'^# User')
+    domain_needle = re.compile(r'^# Domain')
+    template_needle = re.compile(r'^# Template')
+    header_extract = re.compile(r'(.*:\s*)(.*)')
 
     with open(file_path) as read:
         for line in read:
@@ -484,8 +484,8 @@ def user_from_domain(domain, only=False):
         return False
     if only == 'disabled' and vhost[-9:] != '.disabled':
         return False
-    header_match = re.compile('^#')
-    line_match = re.compile('^#\s*User\s*:')
+    header_match = re.compile(r'^#')
+    line_match = re.compile(r'^#\s*User\s*:')
     if os.path.exists(vhost):
         with open(vhost) as v:
             for line in v:
@@ -505,8 +505,8 @@ def docroot_from_domain(domain):
         domain - The domain used in finding the document root
     """
     vhost = get_vhost_path(domain)
-    line_match = re.compile('^[ \s]*root')
-    line_extract = re.compile('.*root[ \s]*([^;]*)[ \s]*;.*')
+    line_match = re.compile(r'^[ \s]*root')
+    line_extract = re.compile(r'.*root[ \s]*([^;]*)[ \s]*;.*')
     if os.path.exists(vhost):
         with open(vhost) as v:
             for line in v:
