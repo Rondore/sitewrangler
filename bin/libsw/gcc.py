@@ -8,13 +8,13 @@ build_path = settings.get('build_path')
 binary_path = build_path + 'bin/gcc'
 
 class GccBuilder(builder.AbstractArchiveBuilder):
-    """A class to build OpenSSL from source."""
+    """A class to build GCC from source."""
     def __init__(self):
         super().__init__('gcc')
 
     def get_installed_version(self):
         about_text = subprocess.getoutput(builder.set_sh_ld + binary_path + ' --version')
-        match = re.match(r'OpenSSL ([0-9a-z\.]*)', about_text)
+        match = re.match(r'gcc \(GCC\) ([0-9a-z\.]*)', about_text)
         if match == None:
             return '0'
         return match.group(1)
@@ -34,9 +34,6 @@ class GccBuilder(builder.AbstractArchiveBuilder):
 
     def get_source_url(self):
         return f'https://mirrorservice.org/sites/sourceware.org/pub/gcc/releases/gcc-{self.source_version}/gcc-{self.source_version}.tar.xz'
-
-    def populate_config_args(self, log):
-        return super().populate_config_args(log, ['./config'])
     
     def system_dependencies(self) -> list[str]:
         """
@@ -57,5 +54,9 @@ class GccBuilder(builder.AbstractArchiveBuilder):
     def standalone_container(self):
         return True
 
-    def populate_config_args(self, log, command=['./configure']):
+    def run_pre_config(self, log):
+        log.run(['mkdir','../gcc-build'], env=self.get_build_env())
+        log.run(['cd','../gcc-build'], env=self.get_build_env())
+
+    def populate_config_args(self, log, command=['../gcc/configure']):
         return super().populate_config_args(log, command)
