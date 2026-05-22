@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from libsw import input_util, command_index
+from libsw import input_util, command_index, settings
 
 def _help():
     print('sw build install [slug_list]  # Enable a software package and rund a build for it')
@@ -18,6 +18,33 @@ def _help():
     print('sw build configure [slug]  # Print the configure command for a package')
 index = command_index.CategoryIndex('build', _help)
 
+def debug_queue(build_queue):
+    import os
+    yaml_dir = settings.get('install_path') + '/var/cache/container-build/'
+    yaml_path = yaml_dir + 'build-structure.yaml'
+    os.makedirs(yaml_dir, exist_ok=True)
+    with open(yaml_path, 'w') as structure:
+        structure.write('containers:' + '\n')
+        for container, status in build_queue.queue:
+            structure.write('- name: ' + container.slug + '\n')
+            structure.write('  base_image: ' + container.base_image + '\n')
+            if len(container.added_images) > 0:
+                structure.write('  added_images:' + '\n')
+                for dep in container.added_images:
+                    structure.write('  - ' + dep.slug + '\n')
+            if len(container.already_in_base_image) > 0:
+                structure.write('  already_in_base_image:' + '\n')
+                for dep in container.already_in_base_image:
+                    structure.write('  - ' + dep.slug + '\n')
+            if len(container.included_builders) > 0:
+                structure.write('  included_builders:' + '\n')
+                for dep in container.included_builders:
+                    structure.write('  - ' + dep.slug + '\n')
+            if len(container.system_dependencies) > 0:
+                structure.write('  system_dependencies:' + '\n')
+                for dep in container.system_dependencies:
+                    structure.write('  - ' + dep + '\n')
+
 def _update(force):
     if force:
         force = force.lower()
@@ -25,8 +52,12 @@ def _update(force):
             force = False
     from libsw import build_queue, build_index
     queue = build_queue.new_queue(force)
-    build_index.populate_enabled(queue)
-    build_index.populate_dependant_builders(queue)
+    populator = build_index.get_preferred_populator(queue)
+    populator.populate_enabled()
+    populator.populate_dependant_builders()
+    populator.depopulate_extraneous()
+    queue.optimize()
+    debug_queue(queue)
     if queue.failed():
         print("One or more builds failed.")
     elif queue.run() == 0:
@@ -37,8 +68,11 @@ index.register_command('upgrade', _update) # for yum/dnf habits :)
 def _checkupdate():
     from libsw import build_queue, build_index
     queue = build_queue.new_queue(False)
-    build_index.populate_enabled(queue)
-    build_index.populate_dependant_builders(queue)
+    populator = build_index.get_preferred_populator(queue)
+    populator.populate_enabled(queue)
+    populator.populate_dependant_builders(queue)
+    populator.depopulate_extraneous()
+    queue.optimize()
     update_list = queue.run_check()
     if len(update_list) == 0:
         print("All software is already up-to-date.")

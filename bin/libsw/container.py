@@ -5,17 +5,29 @@ import shutil
 from libsw import email, logger, settings, builder, build_container, dependency_index, build_index
 import os
 from typing import Literal
+import subprocess
 
 default_base_image = 'debian:trixie'
 
 dep_index = dependency_index.Index()
 
+thread_count = subprocess.getoutput('nproc')
+
 build_env: list[tuple[str, str]] = [
     ['LD_LIBRARY_PATH', '/opt/sitewrangler/usr/lib64:/opt/sitewrangler/usr/lib'],
-    ['BUILD_ARG}LDFLAGS', '-L/opt/sitewrangler/usr/lib64/ -L/opt/sitewrangler/usr/lib/'],
-    ['BUILD_ARG}CPPFLAGS', '-I/opt/sitewrangler/usr/include/'],
-    ['BUILD_ARG}PKG_CONFIG_PATH', '/opt/sitewrangler/usr/lib64/pkgconfig/:/opt/sitewrangler/usr/lib/pkgconfig/']
+    ['LDFLAGS', '-L/opt/sitewrangler/usr/lib64/ -L/opt/sitewrangler/usr/lib/'],
+    ['CPPFLAGS', '-I/opt/sitewrangler/usr/include/'],
+    ['PKG_CONFIG_PATH', '/opt/sitewrangler/usr/lib64/pkgconfig/:/opt/sitewrangler/usr/lib/pkgconfig/']
 ]
+
+container_build_env: list[tuple[str, str]] = [
+    ['MAKEFLAGS', '-j' + thread_count]
+]
+
+debug_container_logic = False
+def print_container_debug(output: str):
+    if debug_container_logic:
+        print(output)
 
 class AbstractContainerBuildSystem(ABC):
 
@@ -48,8 +60,8 @@ class PodmanBuildSystem(AbstractContainerBuildSystem):
 
     def get_build_command(self, tag, source_directory) -> list[str]:
         command = ['podman', 'build', source_directory, '--net=host']
-        for env in build_env:
-            command.append(f'--env={env[0]}="{env[1]}" ')
+        for env in container_build_env:
+            command.append(f'--env={env[0]}={env[1]}')
         command.append('-t')
         command.append(tag)
         return command
@@ -67,7 +79,7 @@ class DockerBuildSystem(AbstractContainerBuildSystem):
 
     def get_build_command(self, tag, source_directory) -> list[str]:
         command = ['docker', 'build', source_directory]
-        for env in build_env:
+        for env in container_build_env:
             command.append('--build-arg')
             command.append(f'{env[0]}="{env[1]}"')
         command.append('-t')
@@ -85,22 +97,33 @@ def get_container_build_system() -> AbstractContainerBuildSystem:
             build_system = PodmanBuildSystem()
     return build_system
 
+container_cache = dict()
+def get_container(slug: str) -> False | ContainerImage:
+    global container_cache
+    image = False
+    try:
+        image = container_cache[slug]
+    except KeyError:
+        builder = build_index.get_builder(slug)
+        if builder:
+            image = ContainerImage(builder)
+            container_cache[slug] = image
+    return image
+
 def get_recursive_dependencies(builder: builder.AbstractBuilder) -> list[builder.AbstractBuilder]:
-    full_list = get_all_enabled_builders()
     dependencies = []
     dependency_slugs = []
     for slug in builder.dependencies():
         if slug not in dependency_slugs:
-            for possible in full_list:
-                if possible.slug == slug:
-                    dependency_slugs.append(slug)
-                    dependencies.append(possible)
-                    child_dependencies = get_recursive_dependencies(possible)
-                    for child in child_dependencies:
-                        if child.slug not in dependency_slugs:
-                            dependency_slugs.append(child.slug)
-                            dependencies.append(child)
-                    break
+            builder = build_index.get_builder(slug)
+            if builder:
+                dependency_slugs.append(slug)
+                dependencies.append(builder)
+                child_dependencies = get_recursive_dependencies(builder)
+                for child in child_dependencies:
+                    if child.slug not in dependency_slugs:
+                        dependency_slugs.append(child.slug)
+                        dependencies.append(child)
     return dependencies
         
 def get_recursive_system_dependencies(builder: builder.AbstractBuilder) -> list[str]:
@@ -163,22 +186,26 @@ class ContainerImage:
     """
     def __init__(self, builder: builder.AbstractBuilder):
         self.slug = builder.slug
+        header = '=== ' + self.slug + ' ==='
+        print_container_debug('=' * len(header))
+        print_container_debug(header)
+        print_container_debug('=' * len(header))
         self.builder = builder
         self.copy_commands: list[tuple[str, str]] = []
         dependency_builders = get_recursive_dependencies(builder)
-        print('=== Dependencies ===')
+        print_container_debug('=== Dependencies ===')
         for builder in dependency_builders:
-            print(builder.slug)
-        print("")
+            print_container_debug(builder.slug)
+        print_container_debug("")
 
         base_image_pool: list[builder.AbstractBuilder] = []
         for builder in dependency_builders:
             if builder.standalone_container():
                 base_image_pool.append(builder)
-        print('=== Base Image Pool ===')
+        print_container_debug('=== Base Image Pool ===')
         for builder in base_image_pool:
-            print(builder.slug)
-        print("")
+            print_container_debug(builder.slug)
+        print_container_debug("")
 
         # Find the base image
         base_image_builder, base_dependencies = get_optimal_base_image(base_image_pool)
@@ -186,34 +213,39 @@ class ContainerImage:
             self.base_image = get_container_build_system().get_image_prefix() + base_image_builder.slug
         else:
             self.base_image = default_base_image
-        print('=== Base Image ===')
-        print(self.base_image)
-        print("")
+        print_container_debug('=== Base Image ===')
+        print_container_debug(self.base_image)
+        print_container_debug("")
 
         # Find images that will be copied into the build and final images
         self.added_images: list[builder.AbstractBuilder] = []
+        self.already_in_base_image: list[builder.AbstractBuilder] = []
         for image in base_image_pool:
             if image != base_image_builder:
-                self.added_images.append(image)
-        print('=== Added Images ===')
+                if image.slug in base_image_builder.dependencies():
+                    self.already_in_base_image.append(image)
+                else:
+                    self.added_images.append(image)
+        print_container_debug('=== Added Images ===')
         for image in self.added_images:
-            print(image.slug)
-        print("")
+            print_container_debug(image.slug)
+        print_container_debug("")
 
         # Find software that will need to be compiled as part of this image build
         self.included_builders: list[builder.AbstractBuilder] = []
-        for builder in dependency_builders:
-            if builder not in base_dependencies and builder not in base_image_pool:
-                self.included_builders.append(builder)
+        if base_dependencies:
+            for builder in dependency_builders:
+                if builder not in base_dependencies and builder not in base_image_pool:
+                    self.included_builders.append(builder)
         for slug in self.builder.get_extra_includes():
             builder = build_index.get_builder(slug)
             if builder:
                 self.included_builders.append(builder)
         self.included_builders = sort_builders_by_prereq(self.included_builders)
-        print('=== Included Software ===')
+        print_container_debug('=== Included Software ===')
         for builder in self.included_builders:
-            print(builder.slug)
-        print("")
+            print_container_debug(builder.slug)
+        print_container_debug("")
 
         # Find system packages that will need to be installed in the final image (apt install)
         unnecessary = []
@@ -226,10 +258,10 @@ class ContainerImage:
                     if dep not in unnecessary and dep not in self.system_dependencies:
                         self.system_dependencies.append(dep)
         self.system_dependencies = dep_index.list_dependent_names(self.system_dependencies)
-        print('=== System Packages ===')
+        print_container_debug('=== System Packages ===')
         for name in self.system_dependencies:
-            print(name)
-        print("")
+            print_container_debug(name)
+        print_container_debug("")
 
     def get_base_image(self):
         """
@@ -242,7 +274,8 @@ class ContainerImage:
         name = settings.get('install_path') + 'var/log/build/' + self.slug + '.log'
         return name
     
-    def build_container_image(self):
+    def build(self):
+        print('Building ' + self.slug)
         success = False
         logfile = self.log_name()
         logdir = os.path.dirname(logfile)
@@ -301,7 +334,7 @@ class ContainerImage:
     
     def compile_build_file(self) -> str:
         """
-        Create the Dockerfile needed to build the container image.
+        Create the Containerfile/Dockerfile needed to build the container image.
         """
         build_log = logger.Log()
         build_sys = get_container_build_system()
@@ -371,6 +404,16 @@ class ContainerImage:
         build_system = get_container_build_system()
         return self.get_build_file_folder() + build_system.get_build_filename()
 
+    def dependencies(self) -> list[str]:
+        """
+        Returns a list of slugs of the other software images this builder relies on.
+        """
+        deps = []
+        if self.base_image != default_base_image:
+            deps.append(self.base_image.split('/')[-1])
+        deps.extend([builder.slug for builder in self.added_images])
+        return deps
+
 all_enabled_builders = False
 def get_all_enabled_builders() -> list[builder.AbstractBuilder]:
     global all_enabled_builders
@@ -378,8 +421,9 @@ def get_all_enabled_builders() -> list[builder.AbstractBuilder]:
         all_enabled_builders = []
         from libsw import build_queue, build_index
         queue = build_queue.new_queue(False)
-        build_index.populate_enabled(queue)
-        build_index.populate_dependant_builders(queue)
+        populator = build_index.ContainerQueuePopulator(queue)
+        populator.populate_enabled()
+        populator.populate_dependant_builders()
         for builder, status in queue.queue:
             all_enabled_builders.append(builder)
     return all_enabled_builders
@@ -405,7 +449,7 @@ class CompilingImage(ContainerImage):
                     self.system_dependencies.append(dep)
         self.system_dependencies = dep_index.list_dependent_dev_names(self.system_dependencies)
         for name in [
-            'gcc', 'make', 'automake', 'autoconf', 'build-essential', 'bison', 'flex', 'libtool', 'pkg-config'
+            'gcc', 'make', 'automake', 'autoconf', 'build-essential', 'bison', 'flex', 'libtool', 'pkg-config', 'gcc-multilib'
         ]:
             self.system_dependencies.append(name)
 

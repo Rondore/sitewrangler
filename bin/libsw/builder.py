@@ -21,7 +21,7 @@ ld_flags = '-L' + build_path + 'lib64/ -L' + build_path + 'lib/'
 cpp_flags = '-I' + build_path + 'include/'
 pkg_config_path = build_path + 'lib64/pkgconfig/:' + build_path + 'lib/pkgconfig/'
 build_env = dict(LD_LIBRARY_PATH=ld_path, LDFLAGS=ld_flags, CPPFLAGS=cpp_flags, PKG_CONFIG_PATH=pkg_config_path)
-if settings.get('build_system') == 'system':
+if not settings.use_containers:
     build_env = dict(os.environ, LD_LIBRARY_PATH=ld_path, LDFLAGS=ld_flags, CPPFLAGS=cpp_flags, PKG_CONFIG_PATH=pkg_config_path)
 set_sh_ld = 'LD_LIBRARY_PATH=' + ld_path + ' '
 
@@ -334,7 +334,10 @@ class AbstractBuilder(ABC):
         if os.path.exists(target_dir):
             os.chdir(target_dir)
             #TODO add nice -19
-            make = ['make', '-l', settings.get('max_build_load')]
+            make = ['make']
+            max_load = settings.get('max_build_load')
+            if max_load != '0':
+                make.extend(['-l', max_load])
             make.extend(self.make_args())
             retval = log.run(make, env=self.get_build_env())
         os.chdir(old_pwd)
@@ -359,6 +362,16 @@ class AbstractBuilder(ABC):
         """
         pass
 
+    def run_pre_make(self, log):
+        """
+        This function gets called after the source code is configured but before
+        it is compiled. It is often used to make custom modifications to make scripts.
+
+        Args:
+            log - An open log file or null
+        """
+        pass
+
     def clean(self, log):
         """
         Clean build binaries for the software.
@@ -366,11 +379,17 @@ class AbstractBuilder(ABC):
         Args:
             log - An open log file or null
         """
+        if settings.use_containers:
+            return
         old_pwd = os.getcwd()
         target_dir = self.source_dir()
         if os.path.exists(target_dir):
             os.chdir(target_dir)
-            log.run(['make', 'clean', '-l', settings.get('max_build_load')], env=self.get_build_env())
+            command = ['make', 'clean']
+            max_load = settings.get('max_build_load')
+            if max_load != '0':
+                command.extend(['-l', max_load])
+            log.run(command, env=self.get_build_env())
         os.chdir(old_pwd)
 
     def check_build(self):
@@ -440,6 +459,7 @@ class AbstractBuilder(ABC):
                 if debug:
                     log.log('CONFIG: ' + ' '.join(command))
                 config_ret_val = log.run(command, env=self.get_build_env())
+            self.run_pre_make(log)
             log.log("Running make")
             if config_ret_val != 0:
                 log.log(self.slug + ' configure command failed. (exit code ' + str(config_ret_val) + ') Exiting.')
@@ -630,7 +650,9 @@ class AbstractArchiveBuilder(AbstractBuilder):
             ext = '.tgz'
             type = 'r:gz'
         tarname = self.build_dir + self.slug + '-' + self.source_version + ext
-        if not os.path.exists(tarname):
+        if os.path.exists(tarname):
+            log.log('Using local archive copy')
+        else:
             if not os.path.exists(self.build_dir):
                 os.makedirs(self.build_dir)
             response = requests.get(source)

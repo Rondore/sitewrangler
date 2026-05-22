@@ -122,7 +122,7 @@ class ModSecurityBuilder(builder.AbstractTagBuilder):
 class ModSecurityRulesetBuilder(builder.AbstractBuilder):
     """A class to compile multiple ModSecurity rulesets into one file."""
     def __init__(self):
-        super().__init__('modsec-rules')
+        super().__init__('modsec-rules', source_version='1.0.0')
 
     def get_source_url(self):
         return ''

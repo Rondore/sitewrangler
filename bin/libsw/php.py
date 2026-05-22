@@ -799,10 +799,10 @@ def get_status_array():
         statuses.append([subversion, status])
     return statuses
 
-imap_git_path = 'https://salsa.debian.org/holmgren/uw-imap.git'
-imap_git_dir = 'uw-imap'
-# imap_git_path = 'https://github.com/uw-imap/imap.git'
-# imap_git_dir = 'imap'
+# imap_git_path = 'https://salsa.debian.org/holmgren/uw-imap.git'
+# imap_git_dir = 'uw-imap'
+imap_git_path = 'https://github.com/uw-imap/imap.git'
+imap_git_dir = 'imap'
 
 class ImapBuilder(builder.AbstractGitBuilder):
     """A class to build UW IMAP from source."""
@@ -818,9 +818,21 @@ class ImapBuilder(builder.AbstractGitBuilder):
 
     def make(self, log):
         log.run(['touch', 'ip6'])
-        return log.run(['make', '-l', settings.get('max_build_load'), self.get_distro(), 'IP=6'], env=builder.build_env)
+        if settings.use_containers:
+            log.run('echo lnp > OSTYPE')
+        else:
+            with open('OSTYPE', 'w+') as ostype:
+                ostype.write('lnp')
+        command = ['make']
+        max_load = settings.get('max_build_load')
+        if max_load != '0':
+            command.extend(['-l', max_load])
+        command.extend([self.get_distro(), 'IP=6'])
+        return log.run(command, env=builder.build_env)
 
     def get_distro(self):
+        if settings.use_containers:
+            return 'ldb'
         distro = settings.get('imap_distro')
         if distro == 'unset':
             detected_distro = detect_distro_code()
@@ -871,15 +883,18 @@ class ImapBuilder(builder.AbstractGitBuilder):
     def install(self, log):
         pass
 
-    def populate_config_args(self, log): # hack: using config methods to call sed in makefile
+    def run_pre_config(self, log):
         dir_name = self.slug
         if not settings.use_containers:
             dir_name = imap_git_dir
-        return ['sed', '-i',
+        log.run(['sed', '-i',
             '-e', r's/^\(EXTRAAUTHENTICATORS=\).*$/\1gss/',
             '-e', r's~SSLLIB=/[^ ]* ~SSLLIB=/opt/sitewrangler/usr/lib64 ~',
             '-e', r's~SSLINCLUDE=/[^ ]* ~SSLINCLUDE=/opt/sitewrangler/usr/include ~',
-            f'{build_path}src/{dir_name}/Makefile']
+            f'{build_path}src/{dir_name}/Makefile'])
+
+    def populate_config_args(self, log):
+        return []
 
     def source_dir(self):
         return self.build_dir + imap_git_dir + '/'
@@ -900,6 +915,11 @@ class ImapBuilder(builder.AbstractGitBuilder):
         Get a list of all system packages needed to run the built software (apt install)
         """
         return ['krb5', 'libpam']
+
+    # def get_build_env(self) -> dict[str, str]:
+    #     env = super().get_build_env()
+    #     env['CXXFLAGS'] = '-std=c++17'
+    #     return env
 
 def get_registered_pecl_builders():
     """Get an array of all PECL builders enabled by the user."""
@@ -922,7 +942,10 @@ class PhpBaseBuilder(builder.AbstractBuilder):
 
     def dependencies(self):
         # return ['openssl', 'curl', 'uw-imap']
-        deps = ['openssl', 'curl', 'uw-imap']
+        # deps = ['openssl', 'curl', 'uw-imap']
+        deps = ['openssl', 'curl']
+        for pecl_builder in get_registered_pecl_builders():
+            deps.append(pecl_builder.slug)
         from libsw import build_index
         if 'postgresql' in build_index.enabled_slugs():
             deps.append('postgresql')
@@ -994,6 +1017,9 @@ class PhpBaseBuilder(builder.AbstractBuilder):
     
     def system_dependencies(self) -> list[str]:
         return php_system_dependencies
+    
+    def standalone_container(self):
+        return True
 
 class PhpBuilder(builder.AbstractArchiveBuilder):
     """A class to build PHP from source."""

@@ -2,19 +2,21 @@
 
 import os
 
-from libsw import settings, builder
+from libsw import settings, builder, container
 
 default_failed_file = settings.get('install_path') + 'etc/build-failures'
 debug = settings.get('debug_build_queue')
 
+type Target = builder.AbstractBuilder | container.ContainerImage
+
 class BuildQueue():
     """
-    A list of builders that can be built in a batch. Generally all
+    A list of targets that can be built in a batch. Generally all
     depenencies of listed software is also listed. The build queue, when
     run, will only build missing and outdated software.
     """
     def __init__(self, failed_file=default_failed_file):
-        self.queue: list[tuple[builder.AbstractBuilder, str]] = []
+        self.queue: list[tuple[Target, str]] = []
         self.failed_file = failed_file
         self.failure_cache = False
 
@@ -23,41 +25,41 @@ class BuildQueue():
         self.failure_cache = False
         self.reset_statuses()
 
-    def append(self, builder: builder.AbstractBuilder):
+    def append(self, target: Target):
         """
-        Add a builder to the queue regardless of weather or not is alread in the
+        Add a target to the queue regardless of weather or not is alread in the
         queue.
 
         Args:
-            builder - The builder to add
+            target - The target to add
         """
         status = ''
-        self.queue.append([builder, status])
+        self.queue.append([target, status])
 
-    def append_missing(self, builder: builder.AbstractBuilder) -> bool:
+    def append_missing(self, target: Target) -> bool:
         """
-        Add a builder to the queue only if it is not alread in the queue.
+        Add a target to the queue only if it is not alread in the queue.
 
         Args:
-            builder - The builder to add
+            target - The target to add
         """
         for b,status in self.queue:
-            if b.slug == builder.slug:
+            if b.slug == target.slug:
                 return False
-        self.append(builder)
+        self.append(target)
         return True
 
     def populate_dependancy_tree(self):
-        for builder, status in self.queue:
-            builder.dependants = []
-        for builder, status in self.queue:
-            for test_builder, test_status in self.queue:
-                if builder.slug in test_builder.dependencies():
-                    builder.dependants.append(test_builder)
+        for target, status in self.queue:
+            target.dependants = []
+        for target, status in self.queue:
+            for test_target, test_status in self.queue:
+                if target.slug in test_target.dependencies():
+                    target.dependants.append(test_target)
 
     def in_failed_state(self, slug: str) -> bool:
         """
-        Check if a builder is marked as having failed a build.
+        Check if a target is marked as having failed a build.
 
         Args:
             slug - The slug name of the software package to check
@@ -84,16 +86,15 @@ class BuildQueue():
                 for slug in self.failure_cache:
                     fail_list.write(slug + '\n')
 
-    # def get_ordered_builders(self):
-    def optimize(self) -> list[tuple[builder.AbstractBuilder, str]]:
+    def optimize(self) -> list[tuple[Target, str]]:
         """
-        Get an array of builders ordered so that all packages are preceded by their
+        Get an array of targets ordered so that all packages are preceded by their
         dependencies.
         """
         source_list = []
-        target_list: list[tuple[builder.AbstractBuilder, str]] = []
-        # for builder_tuple in self.queue:
-        #     source_list.append(builder_tuple)
+        target_list: list[tuple[Target, str]] = []
+        # for target_tuple in self.queue:
+        #     source_list.append(target_tuple)
         source_list.extend(self.queue)
         old_length = 0
         current_length = len(source_list)
@@ -105,8 +106,8 @@ class BuildQueue():
                 satisfied = True
                 for dep in deps:
                     found_dep = False
-                    for builder, status in target_list:
-                        if builder.slug == dep:
+                    for target, status in target_list:
+                        if target.slug == dep:
                             found_dep = True
                             break
                     if not found_dep:
@@ -131,14 +132,14 @@ class BuildQueue():
         self.reset_statuses()
         rebuild_list: tuple[str, str] = []
         for i in range(len(self.queue)):
-            builder, status = self.queue[i]
-            status = self.live_status(builder)
+            target, status = self.queue[i]
+            status = self.live_status(target)
             if status == 'pass':
                 pass
             elif status == 'ready':
-                rebuild_list.append([builder.slug, 'update'])
+                rebuild_list.append([target.slug, 'update'])
             elif status == 'waiting':
-                rebuild_list.append([builder.slug, 'depend'])
+                rebuild_list.append([target.slug, 'depend'])
         return rebuild_list
 
     def run(self) -> int:
@@ -149,13 +150,13 @@ class BuildQueue():
         self.count = 0
         self.reset_statuses()
         # for i in range(len(self.queue)):
-        #     builder, status = self.queue[i]
-        #     status = self.live_status(builder)
-        #     self.queue[i] = builder, status
+        #     target, status = self.queue[i]
+        #     status = self.live_status(target)
+        #     self.queue[i] = target, status
         # self._write_failed_file()
         for i in range(len(self.queue)):
-            builder, status = self.queue[i]
-            status = self.live_status(builder)
+            target, status = self.queue[i]
+            status = self.live_status(target)
             if status == 'pass':
                 pass
             else:
@@ -164,75 +165,75 @@ class BuildQueue():
                     # it after a successful build so that if Site Wrangler or
                     # the system crashes, the build starts up where it left off
                     # on next run
-                    if not self.in_failed_state(builder.slug):
-                        self.failure_cache.append(builder.slug)
+                    if not self.in_failed_state(target.slug):
+                        self.failure_cache.append(target.slug)
                         #TODO mark dependents as failed in the failure_cache
                         self._write_failed_file()
-                    success, log = builder.build()
+                    success, log = target.build()
                     if success:
                         status = 'done'
                         self.count += 1
-                        self.failure_cache.remove(builder.slug)
+                        self.failure_cache.remove(target.slug)
                         self._write_failed_file()
                     else:
                         status = 'failed'
-            self.queue[i] = builder, status
+            self.queue[i] = target, status
         return self.count
 
-    def find(self, slug) -> builder.AbstractBuilder | False:
+    def find(self, slug) -> Target | False:
         """
-        Fetch a builder from the queue.
+        Fetch a target from the queue.
 
         Args:
-            slug - The slug name of the builder to return
+            slug - The slug name of the target to return
         """
-        for builder, status in self.queue:
-            if builder.slug == slug:
-                return builder
+        for target, status in self.queue:
+            if target.slug == slug:
+                return target
         return False
 
-    def entry(self, slug) -> tuple[builder.AbstractBuilder, str] | tuple[False, False]:
+    def entry(self, slug) -> tuple[Target, str] | tuple[False, False]:
         """
-        Fetch a builder from the queue along with it's build status.
+        Fetch a target from the queue along with it's build status.
 
         Args:
-            slug - The slug name of the builder to return
+            slug - The slug name of the target to return
         """
-        for builder, status in self.queue:
-            if builder.slug == slug:
-                return builder, status
+        for target, status in self.queue:
+            if target.slug == slug:
+                return target, status
         return False, False
 
-    def mark_dependents_failed(self, builder: builder.AbstractBuilder) -> bool:
+    def mark_dependents_failed(self, target: Target) -> bool:
         """
-        Mark all builders that are dependent upon a builder as failed.
+        Mark all targets that are dependent upon a builder as failed.
 
         Args:
-            builder - The failed builder that needs dependent software marked as
+            target - The failed target that needs dependent software marked as
                 failed
         """
         write = False
-        if not self.in_failed_state(builder.slug):
-            self.failure_cache.append(builder.slug)
+        if not self.in_failed_state(target.slug):
+            self.failure_cache.append(target.slug)
             write = True
         #TODO fix this so that it correctly walks the dependency tree
-        # builder.dependencies()
+        # target.dependencies()
 
-        for other_builder in self.dependents:
-            child_wrote = self.mark_dependents_failed(other_builder)
+        for other_target in self.dependents:
+            child_wrote = self.mark_dependents_failed(other_target)
             if child_wrote:
                 write = False
 
-        # for other_builder in self.queue:
-        #     if builder.slug in other_builder.dependencies():
-        #         child_wrote = self.mark_dependents_failed(other_builder)
+        # for other_target in self.queue:
+        #     if target.slug in other_target.dependencies():
+        #         child_wrote = self.mark_dependents_failed(other_target)
         #         if child_wrote:
         #             write = False
 
         # for dep in dependencies:
-        #     dep_builder = self.find(dep)
-        #     if dep_builder:
-        #         child_wrote = self.mark_dependents_failed(dep_builder)
+        #     dep_target = self.find(dep)
+        #     if dep_target:
+        #         child_wrote = self.mark_dependents_failed(dep_target)
         #         if child_wrote:
         #             write = False
         if write:
@@ -241,68 +242,68 @@ class BuildQueue():
 
     def failed(self) -> bool:
         """
-        Returns True if any builder is in a failed state.
+        Returns True if any target is in a failed state.
         """
-        for builder, status in self.queue:
+        for target, status in self.queue:
             if status == 'failed':
                 return True
         return False
 
     def incomplete_count(self) -> int:
         """
-        Returns the number of builders that are still set to install.
+        Returns the number of targets that are still set to install.
         """
         count = 0
-        for builder, status in self.queue:
+        for target, status in self.queue:
             if status != 'done':
                 count += 1
         return count
 
     def reset_statuses(self):
         """
-        Setup the builders for a fresh queue run by setting initial build
+        Setup the targets for a fresh queue run by setting initial build
         statuses.
         """
         for i in range(len(self.queue)):
-            builder, status = self.queue[i]
+            target, status = self.queue[i]
             status = ''
-            if self.in_failed_state(builder.slug):
-                print('Marking ' + builder.slug + ' for build due to previous action.')
+            if self.in_failed_state(target.slug):
+                print('Marking ' + target.slug + ' for build due to previous action.')
                 status = 'waiting'
-            self.queue[i] = builder, status
+            self.queue[i] = target, status
 
-    def live_status(self, builder, level=0) -> str:
+    def live_status(self, target, level=0) -> str:
         """
-        Recalculate the status of a builder by checking it's dependencies.
+        Recalculate the status of a target by checking it's dependencies.
 
         Args:
-            builder - The builder to check
+            target - The target to check
             level - The recursive depth level the status check is in
         """
         dmsg = 'Checking '
         for i in range(level):
             dmsg += ' '
-        dmsg += builder.slug + ': '
+        dmsg += target.slug + ': '
         if debug or level == 0:
             print(dmsg, end='', flush=True)
 
         status = 'missing'
         for b, s in self.queue:
-            if b is builder:
+            if b is target:
                 status = s
         if status == '' or status == 'waiting':
-            if status == '' and not builder.update_needed():
+            if not settings.use_containers and status == '' and not target.update_needed():
                 status = 'pass'
             else:
                 status = 'ready'
-            deps = builder.dependencies()
+            deps = target.dependencies()
             if len(deps) > 0:
                 for slug in deps:
-                    dep_builder, dep_status = self.entry(slug)
+                    dep_target, dep_status = self.entry(slug)
                     if dep_status == False:
-                        print('Unable to find package "' + slug + '" needed for "' + builder.slug + '"') # TODO replace with logger
+                        print('Unable to find package "' + slug + '" needed for "' + target.slug + '"') # TODO replace with logger
                         return 'failed'
-                    dep_status = self.live_status(dep_builder, level + 1)
+                    dep_status = self.live_status(dep_target, level + 1)
                     if dep_status == 'failed' or dep_status == 'missing':
                         return 'failed'
                     elif dep_status == 'waiting' or dep_status == 'ready':
@@ -314,6 +315,20 @@ class BuildQueue():
         if debug or level == 0:
             print(status, flush=True)
         return status
+    
+    def remove(self, value):
+        if isinstance(object, str):
+            for pair in self.queue:
+                child, status = pair
+                if child.slug == value:
+                    self.queue.remove(pair)
+                    return
+        else:
+            for pair in self.queue:
+                child, status = pair
+                if child == value:
+                    self.queue.remove(pair)
+                    return
 
 class RebuildQueue(BuildQueue):
     """
@@ -321,8 +336,8 @@ class RebuildQueue(BuildQueue):
     """
     def reset_statuses(self):
         for i in range(len(self.queue)):
-            builder, status = self.queue[i]
-            self.queue[i] = builder, 'waiting'
+            target, status = self.queue[i]
+            self.queue[i] = target, 'waiting'
 
 class TargetedQueue(BuildQueue):
     """
@@ -335,11 +350,11 @@ class TargetedQueue(BuildQueue):
 
     def reset_statuses(self):
         for i in range(len(self.queue)):
-            builder, status = self.queue[i]
-            if builder.slug in self.target_list:
-                self.queue[i] = builder, 'waiting'
+            target, status = self.queue[i]
+            if target.slug in self.target_list:
+                self.queue[i] = target, 'waiting'
             else:
-                self.queue[i] = builder, 'pass'
+                self.queue[i] = target, 'pass'
         self.run_backwards_depenencies()
 
     def run_backwards_depenencies(self):
@@ -349,11 +364,11 @@ class TargetedQueue(BuildQueue):
             for queue_item in self.queue:
                 if queue_item[1] == 'waiting':
                     for i in range(len(self.queue)):
-                        builder, status = self.queue[i]
-                        dependencies = builder.dependencies()
+                        target, status = self.queue[i]
+                        dependencies = target.dependencies()
                         if status != 'waiting' and queue_item[0].slug in dependencies:
                             count += 1
-                            self.queue[i] = builder, 'waiting'
+                            self.queue[i] = target, 'waiting'
 
 def new_queue(force=False):
     """
