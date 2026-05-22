@@ -8,7 +8,7 @@ class LibJpegDependency(dependency.Dependency):
         super().__init__('libjpeg')
 
     def get_system_name(self) -> str:
-        return ' libjpeg62-turbo'
+        return 'libjpeg62-turbo'
 
     def get_dev_system_name(self) -> str:
         return 'libjpeg-dev'

@@ -8,7 +8,7 @@ class LibGdDependency(dependency.Dependency):
         super().__init__('libgd')
 
     def get_system_name(self) -> str:
-        return ' libgd3'
+        return 'libgd3'
 
     def get_dev_system_name(self) -> str:
         return 'libgd-dev'

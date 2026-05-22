@@ -8,7 +8,7 @@ class LibSqliteDependency(dependency.Dependency):
         super().__init__('libsqlite')
 
     def get_system_name(self) -> str:
-        return ' libsqlite3-0'
+        return 'libsqlite3-0'
 
     def get_dev_system_name(self) -> str:
         return 'libsqlite3-dev'

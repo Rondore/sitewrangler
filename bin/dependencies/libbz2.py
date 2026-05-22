@@ -8,7 +8,7 @@ class LibBz2Dependency(dependency.Dependency):
         super().__init__('libbz2')
 
     def get_system_name(self) -> str:
-        return ' libbz2-1.0'
+        return 'libbz2-1.0'
 
     def get_dev_system_name(self) -> str:
         return 'libbz2-dev'
