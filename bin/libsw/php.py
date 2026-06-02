@@ -16,6 +16,7 @@ from shutil import copyfile
 from libsw import logger, curl, file_filter, version, builder, settings, service, system, user, input_util, pecl
 
 # enable_legacy_versions = settings.get_bool('enable_php_legacy_versions')
+php81version = '8.1.34' # 18 Dec 2025
 php80version = '8.0.30' # 04 Aug 2023
 php74version = '7.4.33' # 28 Nov 2022
 php73version = '7.3.33' # 19 Nov 2021
@@ -25,6 +26,7 @@ php70version = '7.0.33' # 10 Jan 2019
 php56version = '5.6.40' # 10 Jan 2019
 
 legacy_versions = [
+    php81version,
     php80version,
     php74version,
     php73version,
