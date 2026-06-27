@@ -41,3 +41,10 @@ def compose_down(compose_file: str | False = False):
     command.extend(get_compose_file_args(compose_file))
     output = subprocess.getoutput(command)
     return output
+
+def compose_restart(compose_file: str | False = False):
+    command: list[str] = [settings.get('build_system')]
+    command.extend(['compose', 'restart'])
+    command.extend(get_compose_file_args(compose_file))
+    output = subprocess.getoutput(command)
+    return output
