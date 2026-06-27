@@ -10,9 +10,11 @@ def compose_dir() -> str:
 def template_dir() -> str:
     return settings.get('install_path') + 'etc/compose-templates/'
 
-def write_compose(filename: str):
+def write_compose(filename: str, output_filename: str | None):
+    if not output_filename:
+        output_filename = filename
     source_file = template_dir() + filename
-    target_file = compose_dir() + filename
+    target_file = compose_dir() + output_filename
     template_vars = template.get_template_vars()
     template.write_template_with_variables(source_file, target_file, template_vars)
 
