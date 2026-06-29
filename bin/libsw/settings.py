@@ -159,6 +159,7 @@ def _get_default_settings():
 
         'enable_php_legacy_versions': False,
         'enable_php_super_legacy_versions': False,
+        'shared_php_container': True,
 
         'local_ip': '',
         'public_ip': '',

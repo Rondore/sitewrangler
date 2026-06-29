@@ -180,3 +180,9 @@ def select_new_username():
         username = input('Username: ')
         keep_trying = exists(username)
     return username
+
+def get_uid(username: str):
+    return subprocess.getoutput(f"id -u '{username}'").strip()
+
+def get_gid(groupname: str):
+    return subprocess.getoutput(f"id -u '{groupname}'").strip()

@@ -1,0 +1,10 @@
+services:
+
+  sw-php-USERNAMEE:
+    image: localhost/sitewrangler/php-PHPVERSIONN
+    container_name: sw-php-USERNAMEE
+    volumes:
+    - /home/:/home/
+    - INSTALLPATHH/etc/php/php-PHPVERSIONN/USERNAMEE.conf:/opt/sitewrangler/usr/php-PHPVERSIONN/etc/php-fpm.d/USERNAMEE.conf
+    restart: always
+    network_mode: host

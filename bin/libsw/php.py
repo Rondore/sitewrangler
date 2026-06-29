@@ -12,7 +12,7 @@ import shutil
 import pwd
 import time
 from shutil import copyfile
-from libsw import logger, file_filter, version, builder, settings, service, system, user, input_util
+from libsw import logger, file_filter, version, builder, settings, service, system, user, input_util, compose
 
 # enable_legacy_versions = settings.get_bool('enable_php_legacy_versions')
 php81version = '8.1.34' # 18 Dec 2025
@@ -64,7 +64,9 @@ super_legacy_versions = [
     php30version
 ]
 
-build_path = settings.get('build_path')
+build_path = '/opt/sitewrangler/usr/'
+if not settings.use_containers:
+    settings.get('build_path')
 
 def php_build_path(sub_version):
     return build_path + 'php-' + sub_version  + '/'
@@ -73,21 +75,62 @@ def php_binary_path(sub_version):
     return build_path + 'php-' + sub_version  + '/bin/php'
 
 def vhost_path(sub_version):
-    return php_build_path(sub_version) + 'etc/php-fpm.d/'
+    if settings.use_containers:
+        return settings.get('install_path') + f'etc/php/php-{sub_version}/'
+    else:
+        return php_build_path(sub_version) + 'etc/php-fpm.d/'
 
 def get_lib_path(sub_version):
     dir = subprocess.getoutput(php_binary_path(sub_version)+ '-config --ini-path')
     return dir + '/'
 
-def restart_service(version, log=logger.Log(False)):
+def get_compose_file(version:str, username: str) -> str:
+    """
+    The the path for a compose file
+
+    Args:
+        version - The PHP subversion to start (such as 7.3)
+        username - The username associated with the compose file (if any)
+    """
+    output = f'php-{version}.yaml'
+    if not settings.get_bool('shared_php_container'):
+        output = f'php-{version}-{username}.yaml'
+    return compose.compose_dir() + output
+
+def get_actualized_compose_file(version:str, username: str) -> str:
+    """
+    Create a compose file from template if it is missing and return the path
+
+    Args:
+        version - The PHP subversion to start (such as 7.3)
+        username - The username associated with the compose file (if any)
+    """
+    source = 'php-shared.yaml'
+    output = f'php-{version}.yaml'
+    if not settings.get_bool('shared_php_container'):
+        source = 'php-sigle.yaml'
+        output = f'php-{version}-{username}.yaml'
+    compose_file = compose.compose_dir() + output
+    if not os.path.exists(compose_file):
+        values = [['USERNAMEE', username],
+                  ['PHPVERSIONN', version]]
+        compose.write_compose(source, output, values)
+    return compose_file
+
+def restart_service(version: str, username: str, log=logger.Log(False)):
     """
     Restart a given PHP service.
 
     Args:
         version - The PHP subversion to start (such as 7.3)
+        username - The username associated with the restart
         log (optional) - An open log file to log to
     """
-    service.restart('php-' + version + '-fpm', log)
+    if settings.use_containers:
+        compose_file = get_actualized_compose_file(version, username)
+        compose.compose_restart(compose_file)
+    else:
+        service.restart('php-' + version + '-fpm', log)
 
 def get_installed_version(sub_version):
     """
@@ -201,16 +244,20 @@ def make_vhost(username, php_version):
         vhost_file_path = get_enabled_vhost_path(php_version, username)
         vhost_dir = os.path.dirname(vhost_file_path)
         group = user.get_user_group(username)
+        uid = user.get_uid(username)
+        gid = user.get_gid(group)
         if not os.path.exists(vhost_dir):
             os.makedirs(vhost_dir)
         with open(vhost_file_path, 'w') as host:
             for line in template:
-                line = line.replace('USERNAME', username, 10000)
-                line = line.replace('GROUPNAME', group, 10000)
+                line = line.replace('USERNAMEE', username, 10000)
+                # line = line.replace('GROUPNAMEE', group, 10000)
+                line = line.replace('USERIDD', uid, 10000)
+                line = line.replace('GRUOUPIDD', gid, 10000)
                 host.write(line)
     add_logrotate_file(username)
     print('Created ' + vhost_file_path)
-    restart_service(php_version)
+    restart_service(php_version, username)
     set_sys_user_version(username, php_version)
 
 def enable_vhost(username):
@@ -227,7 +274,7 @@ def enable_vhost(username):
     source = get_disabled_vhost_path(php_version, username)
     target = source[:-9] # to trim off '.disabled'
     os.rename(source, target)
-    restart_service(php_version)
+    restart_service(php_version, username)
     return True
 
 def disable_vhost(username):
@@ -244,7 +291,12 @@ def disable_vhost(username):
     source = get_enabled_vhost_path(php_version, username)
     target = source + '.disabled'
     os.rename(source, target)
-    restart_service(php_version)
+    if settings.use_containers and not settings.get_bool('shared_php_container'):
+        compose_file = get_compose_file(php_version, username)
+        compose.compose_down(compose_file)
+        os.remove(compose_file)
+    else:
+        restart_service(php_version, username)
     return True
 
 def remove_vhost(username):
@@ -268,7 +320,12 @@ def remove_vhost(username):
         os.remove(disabled_path)
         removed = True
     if removed:
-        restart_service(php_version)
+        if settings.use_containers and not settings.get_bool('shared_php_container'):
+            compose_file = get_compose_file(php_version, username)
+            compose.compose_down(compose_file)
+            os.remove(compose_file)
+        else:
+            restart_service(php_version, username)
     remove_logrotate_file(username)
     return removed
 
@@ -286,7 +343,7 @@ def edit_vhost(username):
     path = get_vhost_path(php_version, username)
     if input_util.edit_file(path):
         print('Restarting php-' + php_version + '-fpm to apply changes.')
-        restart_service(php_version)
+        restart_service(php_version, username)
 
 def get_sys_user_version(username):
     """
@@ -341,7 +398,7 @@ def set_sys_user_version(username, version):
         os.setegid(0)
         os.seteuid(0)
 
-def get_conf_files():
+def get_conf_files(version: str | None = None):
     """
     Get an array of all enabled configuration files.
 
@@ -353,11 +410,12 @@ def get_conf_files():
     for ver in avaliable_versions:
         vpath = vhost_path(ver)
         for file in glob.glob(vpath + '*.conf'):
-            sites.append( {"version": ver, "file": file[len(vpath):-5], "fullPath": file} )
+            if (not version) or (version == ver):
+                sites.append( {"version": ver, "file": file[len(vpath):-5], "fullPath": file} )
     sites = sorted(sites, key=lambda k: k['file'])
     return sites
 
-def get_disabled_conf_files():
+def get_disabled_conf_files(version: str | None):
     """
     Get an array of all disabled configuration files.
 
@@ -369,7 +427,8 @@ def get_disabled_conf_files():
     for ver in avaliable_versions:
         vpath = vhost_path(ver)
         for file in glob.glob(vpath + '*.conf.disabled'):
-            sites.append( {"version": ver, "file": file[len(vpath):-14], "fullPath": file} )
+            if (not version) or (version == ver):
+                sites.append( {"version": ver, "file": file[len(vpath):-14], "fullPath": file} )
     sites = sorted(sites, key=lambda k: k['file'])
     return sites
 
@@ -429,8 +488,8 @@ def change_version(username, old_version, new_version):
     set_sys_user_version(username, new_version)
 
     print('Restarting PHP...')
-    restart_service(old_version)
-    restart_service(new_version)
+    restart_service(old_version, username)
+    restart_service(new_version, username)
     print('Done')
 
 def get_prerelease_user(force_refresh=False):
@@ -581,6 +640,15 @@ class AddPid(file_filter.FileFilter):
         if add_line:
             out_stream.write('pid = run/php-fpm.pid\n')
         return add_line
+    
+def create_php_fpm_conf(versions: dict):
+    base_path = php_build_path(versions['sub'])
+    fpm_conf_name = base_path + 'etc/php-fpm.conf'
+    copyfile(fpm_conf_name + '.default', fpm_conf_name)
+    file_filter.ReplaceRegex(fpm_conf_name, re.compile('^;?pid\\s+='), 'pid = run/php-fpm.pid\n', 1).run()
+    include_line = 'include=' + vhost_path(versions['sub']) + '*.conf'
+    file_filter.AppendUnique(fpm_conf_name, include_line, True).run()
+    AddPid(fpm_conf_name).run()
 
 def deploy_environment(versions, log):
     """
@@ -609,20 +677,19 @@ def deploy_environment(versions, log):
     lib_dir = get_lib_path(versions['sub'])
     copyfile(src_dir + 'php.ini-production', lib_dir + 'php.ini')
 
-    fpm_conf_name = base_path + 'etc/php-fpm.conf'
-    copyfile(fpm_conf_name + '.default', fpm_conf_name)
-    file_filter.ReplaceRegex(fpm_conf_name, re.compile('^;?pid\\s+='), 'pid = run/php-fpm.pid\n', 1).run()
-    include_line = 'include=' + vhost_path(versions['sub']) + '*.conf'
-    file_filter.AppendUnique(fpm_conf_name, include_line, True).run()
-
-    AddPid(fpm_conf_name).run()
+    create_php_fpm_conf(versions)
 
     write_primary_logrotate()
 
     systemd_file = builder.get_systemd_config_path() + 'php-' + versions['sub'] + '-fpm.service'
 
     if os.path.isfile(systemd_file):
-        restart_service(versions['sub'], log)
+        if settings.use_containers and not settings.get_bool('shared_php_container'):
+            for file in get_conf_files(versions['sub']):
+                username = file['file'].split('.')[0]
+                restart_service(versions['sub'], username)
+        else:
+            restart_service(versions['sub'], '', log)
     else:
         with open(systemd_file, 'w+') as unit_file:
             unit_file.write('[Unit]\n')
@@ -934,7 +1001,7 @@ def get_registered_pecl_builders():
             pecl_builders.append(p_builder)
     return pecl_builders
 
-php_system_dependencies = ['libsqlite', 'libonig', 'libxslt', 'libjpeg', 'libbz2', 'libgd']
+php_system_dependencies = ['libsqlite', 'libonig', 'libxslt', 'libjpeg', 'libbz2', 'libgd', 'webpdemux']
 
 class PhpBaseBuilder(builder.AbstractBuilder):
     """A class to build a base container image that each PHP version can use as a base."""
@@ -1212,6 +1279,12 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
     
     def system_dependencies(self) -> list[str]:
         return php_system_dependencies
+    
+    def add_container_config(self, output):
+        base_path = php_build_path(self.versions['sub'])
+        output.write('RUN mv /opt/sitewrangler/usr/php-8.5/etc/php-fpm.conf.default /opt/sitewrangler/usr/php-8.5/etc/php-fpm.conf\n')
+        output.write(f'ENV PATH="/opt/sitewrangler/usr/php-{self.versions['sub']}/sbin:/opt/sitewrangler/usr/php-{self.versions['sub']}/bin:' + r'${PATH}"' + '\n')
+        output.write('CMD php-fpm --nodaemonize --fpm-config ' + base_path + 'etc/php-fpm.conf\n')
 
 def is_same_subversion(versions, version_string):
     """Determine if two versions have the same first two numbers."""
