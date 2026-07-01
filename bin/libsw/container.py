@@ -461,3 +461,9 @@ class CompilingImage(ContainerImage):
 
     def craft_compile_command(self, sorted_builders) -> list[str]:
         return []
+    
+def get_container_status(name: str) -> str:
+    status = subprocess.getoutput(r"podman container inspect '" + name + r"' -f '{{.State.Status}}'", )
+    if 'no such container' in status:
+        status = 'missing'
+    return status

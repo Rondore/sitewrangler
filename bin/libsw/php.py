@@ -117,6 +117,12 @@ def get_actualized_compose_file(version:str, username: str) -> str:
         compose.write_compose(source, output, values)
     return compose_file
 
+def get_php_users() -> list[str]:
+    """
+    Get a list of all users with assigned php
+    """
+    return [f['file'] for f in get_conf_files()]
+
 def restart_service(version: str, username: str, log=logger.Log(False)):
     """
     Restart a given PHP service.
@@ -861,11 +867,21 @@ def get_status_array():
             The status output for the assicated PHP version
     """
     statuses = []
-    for ver in get_versions():
-        subversion = version.get_tree(ver)['sub']
-        #status = subprocess.getoutput("service php-" + subversion + "-fpm status | grep '\s*[Aa]ctive:\s' | sed -E 's/\s*[Aa]ctive:\s//'")
-        status = service.status("php-" + subversion + "-fpm")
-        statuses.append([subversion, status])
+    if settings.use_containers and not settings.get_bool('shared_php_container'):
+        from libsw import container
+        for username in get_php_users():
+            status = container.get_container_status('sw-php-' + username)
+            statuses.append([username, status])
+    else:
+        for ver in get_versions():
+            subversion = version.get_tree(ver)['sub']
+            status = None
+            if settings.use_containers:
+                from libsw import container
+                status = container.get_container_status('sw-php-' + subversion)
+            else:
+                status = service.status("php-" + subversion + "-fpm")
+            statuses.append([subversion, status])
     return statuses
 
 # imap_git_path = 'https://salsa.debian.org/holmgren/uw-imap.git'
