@@ -78,7 +78,7 @@ def template_list(hide_ssl=False):
     for temp in glob.glob(custom_folder_name + '*'):
         is_ssl = temp.endswith('-ssl') or temp.endswith('-hsts')
         if not hide_ssl or not is_ssl:
-            name = temp[len(folder_name):]
+            name = temp[len(custom_folder_name):]
             if name not in templates:
                 templates.append(name)
     return sorted(templates)
