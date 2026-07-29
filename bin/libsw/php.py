@@ -913,7 +913,7 @@ class ImapBuilder(builder.AbstractGitBuilder):
         if max_load != '0':
             command.extend(['-l', max_load])
         command.extend([self.get_distro(), 'IP=6'])
-        return log.run(command, env=builder.build_env)
+        return log.run(command, env=self.get_build_env())
 
     def get_distro(self):
         if settings.use_containers:
@@ -1284,9 +1284,9 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
             log.log('Rebuilding PHP configure file to include PECL libraries')
             os.remove(self.source_dir() + 'configure')
             if settings.use_containers:
-                log.run(['./buildconf', '--force'], env=builder.build_env)
+                log.run(['./buildconf', '--force'], env=self.get_build_env())
             else:
-                log.run([self.source_dir() + 'buildconf', '--force'], env=builder.build_env)
+                log.run([self.source_dir() + 'buildconf', '--force'], env=self.get_build_env())
         if version.first_is_higher('8.0.9999', self.versions['full']):
             remove_ssl2(log, self.source_dir() + 'ext/openssl/openssl.c')
 

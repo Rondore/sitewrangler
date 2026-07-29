@@ -40,9 +40,10 @@ def debug_queue(build_queue):
                 structure.write('  included_builders:' + '\n')
                 for dep in container.included_builders:
                     structure.write('  - ' + dep.slug + '\n')
-            if len(container.system_dependencies) > 0:
+            system_dependencies = container.system_dependencies()
+            if len(system_dependencies) > 0:
                 structure.write('  system_dependencies:' + '\n')
-                for dep in container.system_dependencies:
+                for dep in system_dependencies:
                     structure.write('  - ' + dep + '\n')
 
 def _update(force):

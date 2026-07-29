@@ -251,17 +251,19 @@ class ContainerImage:
         unnecessary = []
         if base_image_builder:
             unnecessary = get_recursive_system_dependencies(base_image_builder)
-        self.system_dependencies: list[str] = self.builder.system_dependencies()
+        self.compile_system_dependencies: list[str] = self.builder.system_dependencies()
         for builder in dependency_builders:
             if builder != base_image_builder:
                 for dep in get_recursive_system_dependencies(builder):
-                    if dep not in unnecessary and dep not in self.system_dependencies:
-                        self.system_dependencies.append(dep)
-        self.system_dependencies = dep_index.list_dependent_names(self.system_dependencies)
+                    if dep not in unnecessary and dep not in self.compile_system_dependencies:
+                        self.compile_system_dependencies.append(dep)
         print_container_debug('=== System Packages ===')
-        for name in self.system_dependencies:
+        for name in self.compile_system_dependencies:
             print_container_debug(name)
         print_container_debug("")
+
+    def system_dependencies(self) -> list[str]:
+        return self.compile_system_dependencies
 
     def get_base_image(self):
         """
@@ -383,16 +385,23 @@ class ContainerImage:
             if builder_image:
                 output.write(f"FROM {self.base_image}\n")
                 output.write("COPY --from=builder /opt/sitewrangler/usr/ /opt/sitewrangler/usr/\n")
-            output.write("RUN apt-get update -qq && \\\n")
-            output.write("    apt-get upgrade -qq && \\\n")
-            if len(self.system_dependencies) > 0:
-                output.write("    apt-get install -qq \\\n")
-                for sys_dep in self.system_dependencies:
-                    output.write(f"    {sys_dep} \\\n")
-                output.write("    && \\\n")
-            output.write("    apt-get clean -qq\n")
+            self.write_system_runtime_install(output)
             self.builder.add_container_config(output)
         return container_build_file
+    
+    def write_system_runtime_install(self, output):
+        runtime_dependencies = self.get_system_runtime_packages()
+        output.write("RUN apt-get update -qq && \\\n")
+        output.write("    apt-get upgrade -qq && \\\n")
+        if len(runtime_dependencies) > 0:
+            output.write("    apt-get install -qq \\\n")
+            for sys_dep in runtime_dependencies:
+                output.write(f"    {sys_dep} \\\n")
+            output.write("    && \\\n")
+        output.write("    apt-get clean -qq\n")
+
+    def get_system_runtime_packages(self) -> list[str]:
+        return dep_index.list_dependent_names(self.compile_system_dependencies)
     
     def get_build_file_folder(self) -> str:
         path = settings.get('install_path')
@@ -442,16 +451,11 @@ class CompilingImage(ContainerImage):
         self.base_image = default_base_image
         self.added_images: list[builder.AbstractBuilder] = []
         self.included_builders: list[builder.AbstractBuilder] = []
-        self.system_dependencies: list[str] = []
+        self.compile_system_dependencies: list[str] = []
         for package in get_all_enabled_builders():
             for dep in get_recursive_system_dependencies(package):
-                if dep not in self.system_dependencies:
-                    self.system_dependencies.append(dep)
-        self.system_dependencies = dep_index.list_dependent_dev_names(self.system_dependencies)
-        for name in [
-            'gcc', 'make', 'automake', 'autoconf', 'build-essential', 'bison', 'flex', 'libtool', 'pkg-config', 'gcc-multilib'
-        ]:
-            self.system_dependencies.append(name)
+                if dep not in self.compile_system_dependencies:
+                    self.compile_system_dependencies.append(dep)
 
     def get_base_image(self):
         return default_base_image
@@ -461,6 +465,14 @@ class CompilingImage(ContainerImage):
 
     def craft_compile_command(self, sorted_builders) -> list[str]:
         return []
+    
+    def get_system_runtime_packages(self) -> list[str]:
+        runtime_dependencies = dep_index.list_dependent_dev_names(self.compile_system_dependencies)
+        for name in [
+            'gcc', 'make', 'automake', 'autoconf', 'build-essential', 'bison', 'flex', 'libtool', 'pkg-config', 'gcc-multilib', 'git'
+        ]:
+            runtime_dependencies.append(name)
+        return runtime_dependencies
     
 def get_container_status(name: str) -> str:
     status = subprocess.getoutput(r"podman container inspect '" + name + r"' -f '{{.State.Status}}'", )
