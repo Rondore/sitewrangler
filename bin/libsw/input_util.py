@@ -37,7 +37,7 @@ def is_domain(text):
 
 def input_ip():
     """
-    Prompt the user to input a domain name.
+    Prompt the user to input an IP address.
     """
     ip = False
     while not ip:
