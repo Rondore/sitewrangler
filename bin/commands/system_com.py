@@ -7,6 +7,7 @@ def _help():
     print('sw system makeswap  # Create a swap file according to swap size settings')
     print('sw system selfupdate  # Update Site Wrangler')
     print('sw system healthcheck  # Restarts any services that are no longer running')
+    print('sw system branch  # Gets the name of the git branch of Site Wrangler')
 index = command_index.CategoryIndex('system', _help)
 
 def _onboot():
@@ -36,3 +37,8 @@ def _health_check():
         system.check_up()
 index.register_command('healthcheck', _health_check)
 index.register_command('health-check', _health_check)
+
+def _branch():
+    from libsw import system
+    print(system.get_sw_branch())
+index.register_command('branch', _branch)

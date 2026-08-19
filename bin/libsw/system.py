@@ -61,7 +61,8 @@ def get_distro_version():
 def get_system_info():
     return { 'package_manager' : get_package_manager(),\
         'distro' : get_distro(),\
-        'version' : get_distro_version()}
+        'version' : get_distro_version(),\
+        'sw_branch' : get_sw_branch()}
 
 def make_extra_swap():
     size = settings.get('swap_size')
@@ -76,3 +77,7 @@ def make_extra_swap():
     os.chmod( '/swapfile', 0o600)
     os.system('mkswap /swapfile')
     os.system('swapon /swapfile')
+
+def get_sw_branch() -> str:
+    os.chdir(settings.get('install_path'))
+    return subprocess.getoutput('git rev-parse --abbrev-ref HEAD')
