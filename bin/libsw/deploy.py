@@ -3,7 +3,7 @@
 import subprocess
 import os
 
-from libsw import file_filter, settings, build_queue, build_index, logger
+from libsw import file_filter, settings, build_queue, build_index, logger, system
 
 def register_ip(ip):
     path = settings.get('install_path') +  'etc/remote-deploy'
@@ -24,6 +24,16 @@ def get_registered_ips():
             if len(line) > 0:
                 ip_list.append(line)
     return ip_list
+
+def init(ip):
+    if ip in get_registered_ips():
+        subprocess.run(['ssh', 'root@' + ip, 'cd /opt/ && ' +
+                        'git clone https://github.com/Rondore/sitewrangler.git && ' +
+                        'cd sitewrangler && ' +
+                        'git checkout -b "' + system.get_sw_branch() + '" && ' +
+                        './bin/installCore.sh'])
+    else:
+        return None
 
 def deploy(force):
     log_path = settings.get('install_path') +  'var/log/remote-deploy'

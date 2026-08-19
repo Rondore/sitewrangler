@@ -63,11 +63,21 @@ index.register_command('create', _add)
 
 def _remove(ip):
     from libsw import input_util, deploy
-    if ip == False or not input_util.is_ip(ip):
-        ip = input_util.input_ip()
+    full_ip_list = deploy.get_registered_ips()
+    if ip == False or not input_util.is_ip(ip) or ip not in full_ip_list:
+        ip = input_util.select_from("Select IP to remove", full_ip_list)
     if deploy.unregister_ip(ip):
         print('Removed ' + ip + ' from deployment targets')
     else:
         print('Unable to remove ' + ip + ' from deployment targets. (already removed?)')
 index.register_command('remove', _remove)
 index.register_command('delete', _remove)
+
+def _init(ip):
+    from libsw import input_util, deploy
+    full_ip_list = deploy.get_registered_ips()
+    if ip == False or not input_util.is_ip(ip) or ip not in full_ip_list:
+        ip = input_util.select_from("Select IP to initialize", full_ip_list)
+    deploy.init(ip)
+index.register_command('init', _init)
+index.register_command('initialize', _init)
