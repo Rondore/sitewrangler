@@ -427,7 +427,7 @@ class AbstractBuilder(ABC):
             self.fetch_source(source_url, log)
             self.apply_patches(log)
 
-    def build(self, log: NoneType | logger.CaptureCommandsLog, is_container=False):
+    def build(self, log: NoneType | logger.CaptureCommandsLog = None, is_container=False):
         """
         Download or update the source code, compile it and then install it.
         """
@@ -664,7 +664,7 @@ class AbstractArchiveBuilder(AbstractBuilder):
         #os.remove(tarname)
         #print(tarname)
 
-    def build(self, log: NoneType | logger.CaptureCommandsLog, is_container=False):
+    def build(self, log: NoneType | logger.CaptureCommandsLog = None, is_container=False):
         if not self.source_version:
             self.source_version = self.updated_version_reference()
         return super().build(log, is_container)
@@ -766,7 +766,7 @@ class AbstractGitBuilder(AbstractBuilder):
     #         #os.chdir(target_dir)
     #     os.chdir(old_pwd)
 
-    def build(self, log: NoneType | logger.CaptureCommandsLog, is_container=False):
+    def build(self, log: NoneType | logger.CaptureCommandsLog = None, is_container=False):
         success, logfile = super().build(log, is_container)
         if success:
             success = self.check_build()
