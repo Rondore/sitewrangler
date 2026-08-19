@@ -399,3 +399,9 @@ def _configure(slug):
             print(' '.join(command))
 index.register_command('configure', _configure)
 index.register_command('conf', _configure)
+
+def _get_digest():
+    from libsw import build_index
+    print(build_index.get_digest())
+index.register_command('getdigest', _get_digest)
+index.register_command('get-digest', _get_digest)

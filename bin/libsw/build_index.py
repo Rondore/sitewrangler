@@ -255,7 +255,7 @@ def get_dependant_upon(slug):
             dependant_slugs.extend(get_dependant_upon(dex.slug))
     return dependant_slugs
 
-def get_installed(excluded_array=False):
+def get_installed(excluded_array=False) -> list[str]:
     """
     Get an array of installed software packages.
 
@@ -264,15 +264,15 @@ def get_installed(excluded_array=False):
     """
     if excluded_array == False:
         excluded_array=[]
-    versions = []
+    names = []
     save_file = _get_enabled_slugs_file()
     if os.path.exists(save_file):
         with open(save_file) as version_file:
             for line in version_file:
                 line = line.replace("\n", "").replace("\r", "")
                 if line not in excluded_array:
-                    versions.append(line)
-    return versions
+                    names.append(line)
+    return names
 
 def _get_enabled_slugs_file():
     """The file path to the enabled slugs file."""
@@ -306,3 +306,16 @@ def enabled_slugs():
     """
     save_file = _get_enabled_slugs_file()
     return file_filter.get_trimmed_lower_file_as_array(save_file)
+
+def get_digest() -> str:
+    """
+    Get a machine-readable list of all software that is installed along with
+    the corresponding version number.
+    """
+    installed = get_installed()
+    output = ''
+    for slug in installed:
+        builder = get_builder(slug)
+        version: str = builder.version_reference()
+        output += slug + " " + version + "\n"
+    return output

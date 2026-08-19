@@ -1211,7 +1211,7 @@ class PhpBuilder(builder.AbstractArchiveBuilder):
         else:
             return False
 
-    def build(self, log: NoneType | logger.CaptureCommandsLog, is_container=False):
+    def build(self, log: NoneType | logger.CaptureCommandsLog = None, is_container=False):
 #        if not os.path.exists(self.build_dir + 'imap/c-client/imap4r1.o'):
 #            ImapBuilder().build()
         self.source_version = self.versions['full']
