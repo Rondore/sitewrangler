@@ -668,13 +668,6 @@ class AbstractArchiveBuilder(AbstractBuilder):
         if not self.source_version:
             self.source_version = self.updated_version_reference()
         return super().build(log, is_container)
-    
-def get_git_head(builder: AbstractGitBuilder):
-    old_pwd = os.getcwd()
-    os.chdir(builder.source_dir())
-    output = subprocess.getoutput("git rev-parse HEAD")
-    os.chdir(old_pwd)
-    return output
 
 class AbstractGitBuilder(AbstractBuilder):
     "Abstract class to build packages from a git repository."
@@ -739,7 +732,7 @@ class AbstractGitBuilder(AbstractBuilder):
             self.fetch_submodules(source, log)
         else:
             self.git_init(log)
-        self.source_version = get_git_head(self)
+        self.source_version = self.get_git_head()
         os.chdir(old_pwd)
 
     def fetch_submodules(self, source, log):
@@ -774,6 +767,13 @@ class AbstractGitBuilder(AbstractBuilder):
     
     def get_head_file(self):
         return self.source_dir() + '/.git/ORIG_HEAD'
+    
+    def get_git_head(self):
+        old_pwd = os.getcwd()
+        os.chdir(self.source_dir())
+        output = subprocess.getoutput("git rev-parse HEAD")
+        os.chdir(old_pwd)
+        return output
 
 class AbstractTagBuilder(AbstractGitBuilder):
     "Abstract class to build packages from a git repository using the latest tag."
@@ -819,7 +819,7 @@ class AbstractTagBuilder(AbstractGitBuilder):
             self.fetch_submodules(source, log)
         else:
             self.git_init(log)
-        self.source_version = get_git_head(self)
+        self.source_version = self.get_git_head()
         os.chdir(old_pwd)
 
     def tag_blocklist(self):
