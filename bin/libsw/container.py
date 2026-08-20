@@ -97,19 +97,6 @@ def get_container_build_system() -> AbstractContainerBuildSystem:
             build_system = PodmanBuildSystem()
     return build_system
 
-container_cache = dict()
-def get_container(slug: str) -> Literal[False] | ContainerImage:
-    global container_cache
-    image = False
-    try:
-        image = container_cache[slug]
-    except KeyError:
-        builder = build_index.get_builder(slug)
-        if builder:
-            image = ContainerImage(builder)
-            container_cache[slug] = image
-    return image
-
 def get_recursive_dependencies(builder: builder.AbstractBuilder) -> list[builder.AbstractBuilder]:
     dependencies = []
     dependency_slugs = []
@@ -422,6 +409,19 @@ class ContainerImage:
             deps.append(self.base_image.split('/')[-1])
         deps.extend([builder.slug for builder in self.added_images])
         return deps
+
+container_cache = dict()
+def get_container(slug: str) -> Literal[False] | ContainerImage:
+    global container_cache
+    image = False
+    try:
+        image = container_cache[slug]
+    except KeyError:
+        builder = build_index.get_builder(slug)
+        if builder:
+            image = ContainerImage(builder)
+            container_cache[slug] = image
+    return image
 
 all_enabled_builders = False
 def get_all_enabled_builders() -> list[builder.AbstractBuilder]:
