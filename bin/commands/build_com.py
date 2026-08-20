@@ -3,7 +3,8 @@
 from libsw import input_util, command_index, settings
 
 def _help():
-    print('sw build install [slug_list]  # Enable a software package and rund a build for it')
+    print('sw build enable [slug_list]  # Enable a software package without runing a build for it')
+    print('sw build install [slug_list]  # Enable a software package and run a build for it')
     print('sw build uninstall [slug_list]  # Remove a software package from the system')
     print('sw build disable [slug_list]  # Disable a software package but do not remove it from the system')
     print('sw build update [force]  # Update softare sources and build anthing that needs building')
@@ -16,6 +17,7 @@ def _help():
     print('sw build list(freeze|frozen)  # List software set to not update')
     print('sw build shell  # Start a shell with environment variables ready to compile')
     print('sw build configure [slug]  # Print the configure command for a package')
+    print('sw build getdigest  # Print the slug and version of each enabled package')
 index = command_index.CategoryIndex('build', _help)
 
 def debug_queue(build_queue):
@@ -246,6 +248,33 @@ def _avaliable_new_autocomplete(args, end_with_space):
             continue
         if possible_slug[:length] == slug:
             print(possible_slug)
+
+def _enable(slug, more):
+    from libsw import build_index, build_queue, file_filter
+    slug_list = []
+    if slug != False:
+        slug = slug.lower()
+        if build_index.get_builder(slug) != False:
+            slug_list.append(slug)
+        else:
+            print('"' + slug + '" not found, skipping...')
+    if more != False and len(more) > 0:
+        for sub_slug in more:
+            sub_slug = sub_slug.lower()
+            if build_index.get_builder(sub_slug) != False:
+                slug_list.append(sub_slug)
+            else:
+                print('"' + sub_slug + '" not found, skipping...')
+    if len(slug_list) == 0:
+        slug_list = build_index.select_slugs("Select software to install")
+    count = 0
+    for entry in slug_list:
+        if build_index.enable_slug(entry):
+            print('Enabled ' + entry)
+            count += 1
+        else:
+            print(entry + ' already enabled (run "sw build update" to build)')
+index.register_command('enable', _enable, autocomplete=_avaliable_new_autocomplete)
 
 def _install(slug, more):
     from libsw import build_index, build_queue, file_filter
