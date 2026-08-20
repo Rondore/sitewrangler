@@ -2,6 +2,7 @@
 
 import subprocess
 import os
+from typing import Literal
 from libsw import settings, template
 
 def compose_dir() -> str:
@@ -25,7 +26,7 @@ def write_compose(filename: str, output_filename: str | None, template_vars=[]):
     template_vars = template.get_template_vars(template_vars)
     template.write_template_with_variables(source_file, target_file, template_vars)
 
-def get_compose_file_args(compose_file: str | False = False):
+def get_compose_file_args(compose_file: str | Literal[False] = False):
     compose_list = []
     parent_dir = compose_dir()
     if(compose_file):
@@ -37,21 +38,21 @@ def get_compose_file_args(compose_file: str | False = False):
                 compose_list.extend(['-f', parent_dir + file])
     return compose_list
 
-def compose_up(compose_file: str | False = False):
+def compose_up(compose_file: str | Literal[False] = False):
     command: list[str] = get_compose_base_command()
     command.extend(get_compose_file_args(compose_file))
     command.extend(['up', '-d'])
     output = subprocess.run(command, stderr=subprocess.STDOUT)
     return output
 
-def compose_down(compose_file: str | False = False):
+def compose_down(compose_file: str | Literal[False] = False):
     command: list[str] = get_compose_base_command()
     command.extend(get_compose_file_args(compose_file))
     command.extend(['down'])
     output = subprocess.run(command, stderr=subprocess.STDOUT)
     return output
 
-def compose_restart(compose_file: str | False = False):
+def compose_restart(compose_file: str | Literal[False] = False):
     command: list[str] = get_compose_base_command()
     command.extend(get_compose_file_args(compose_file))
     command.extend(['up', '-d', '--force-recreate'])
