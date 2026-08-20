@@ -73,7 +73,7 @@ class Index():
                 return dependency.is_installed()
         return False
 
-    def get_dependent(self, name: str) -> dependency.Depenency | False:
+    def get_dependent(self, name: str) -> dependency.Dependency | False:
         """
         Retrieves the class that represents a system dependency
         """
