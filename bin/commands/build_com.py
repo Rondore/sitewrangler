@@ -250,7 +250,7 @@ def _avaliable_new_autocomplete(args, end_with_space):
             print(possible_slug)
 
 def _enable(slug, more):
-    from libsw import build_index, build_queue, file_filter
+    from libsw import build_index
     slug_list = []
     if slug != False:
         slug = slug.lower()
