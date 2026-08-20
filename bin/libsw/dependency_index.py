@@ -11,7 +11,7 @@ class Index():
     """
     index: list[dependency.Dependency] = []
 
-    def register_dependency(self, dependency: dependency.Depenency):
+    def register_dependency(self, dependency: dependency.Dependency):
         """
         Register a dependency within Site Wrangler.
         """
