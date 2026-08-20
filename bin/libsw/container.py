@@ -2,10 +2,10 @@
 
 from abc import ABC, abstractmethod
 import shutil
-from libsw import email, logger, settings, builder, build_container, dependency_index, build_index
 import os
 from typing import Literal
 import subprocess
+from libsw import email, logger, settings, builder, build_container, dependency_index, build_index
 
 default_base_image = 'debian:trixie'
 
@@ -98,7 +98,7 @@ def get_container_build_system() -> AbstractContainerBuildSystem:
     return build_system
 
 container_cache = dict()
-def get_container(slug: str) -> False | ContainerImage:
+def get_container(slug: str) -> Literal[False] | ContainerImage:
     global container_cache
     image = False
     try:
