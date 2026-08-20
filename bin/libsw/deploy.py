@@ -28,9 +28,8 @@ def get_registered_ips():
 def init(ip):
     if ip in get_registered_ips():
         subprocess.run(['ssh', 'root@' + ip, 'cd /opt/ && ' +
-                        'git clone https://github.com/Rondore/sitewrangler.git && ' +
+                        'git clone -b "' + system.get_sw_branch() + '" https://github.com/Rondore/sitewrangler.git && ' +
                         'cd sitewrangler && ' +
-                        'git checkout -b "' + system.get_sw_branch() + '" && ' +
                         './bin/installCore.sh'])
     else:
         return None
