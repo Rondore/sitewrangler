@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from typing import Literal
 from libsw import dependency
 
 class Index():
@@ -73,7 +74,7 @@ class Index():
                 return dependency.is_installed()
         return False
 
-    def get_dependent(self, name: str) -> dependency.Dependency | False:
+    def get_dependent(self, name: str) -> dependency.Dependency | Literal[False]:
         """
         Retrieves the class that represents a system dependency
         """
