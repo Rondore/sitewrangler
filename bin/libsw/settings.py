@@ -108,7 +108,7 @@ def _populate_settings():
 
 def _autodetect_defaults():
     # Detect the Exim system user
-    from libsw import email, php
+    from libsw import email
     user, group = email.get_detected_exim_user()
     set('exim_user', user)
     set('exim_group', group)
