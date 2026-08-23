@@ -11,6 +11,7 @@ etc/logrotate.d
 etc/raw-modsec-rulesets
 etc/php
 etc/container-compose
+etc/remote-deploy
 .venv
 sitewrangler_venv.py
 usr/
