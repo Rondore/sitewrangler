@@ -127,6 +127,27 @@ def _autodetect_defaults():
         if cpu_count > 0:
             set('max_build_load', str(cpu_count) + '.0')
 
+    set('ssh_key', detect_identity_file())
+
+def detect_identity_file() -> str:
+    import subprocess
+    ssh_dir = '/root/.ssh/'
+    ideal_file = ssh_dir + 'id_ed25519'
+    check_list = [
+            ideal_file,
+            ssh_dir + 'id_ed25519_sk',
+            ssh_dir + 'id_rsa',
+            ssh_dir + 'id_rsa_sk',
+            ssh_dir + 'id_ecdsa',
+            ssh_dir + 'id_ecdsa_sk'
+        ]
+    for file in check_list:
+        if os.path.exists(file):
+            return file
+    os.makedirs(ssh_dir, exist_ok=True)
+    subprocess.run(['ssh-keygen', '-t', 'ed25519', '-N', '', '-f', ideal_file])
+    return ideal_file
+
 def _get_default_settings():
     """
     Returns a dictionary populated with the default settings.
@@ -173,7 +194,8 @@ def _get_default_settings():
 
         'compact_help': False,
 
-        'swap_size': '1.5G'
+        'swap_size': '1.5G',
+        'ssh_key': ''
     }
 
 use_containers = get('build_system') != 'system'

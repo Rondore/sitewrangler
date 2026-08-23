@@ -7,6 +7,7 @@ from libsw import file_filter, settings, build_queue, build_index, logger, syste
 
 def register_ip(ip):
     path = settings.get('install_path') +  'etc/remote-deploy'
+    add_podman_connection(ip)
     return file_filter.AppendUnique(path, ip, True).run()
 
 def unregister_ip(ip):
@@ -111,3 +112,28 @@ def get_deploy_live_status(ip, log, force, queue, builder, level=0):
         dmsg += builder.slug + ' ' + status
         print(dmsg)
     return status
+
+def get_remote_enabled_packages(ip: str) -> list[str]:
+    """
+    Get a list of all packages enabled on a remote ip
+    """
+    if ip in get_registered_ips():
+        remote_command = 'cat "$(sw setting get install_path)/etc/enabled-packages" 2>/dev/null'
+        process = subprocess.run(['ssh', 'root@' + ip, remote_command], capture_output=True)
+        if process.returncode == 0:
+            return process.stdout.decode().splitlines()
+    return []
+
+def add_podman_connection(ip: str, identity_file: str | None = None):
+    if not identity_file:
+        identity_file = settings.get('ssh_key')
+    subprocess.run(['podman', 'system', 'connection', 'add', '--identity', identity_file, ip, 'root@' + ip])
+
+def remove_podman_connection(ip: str):
+    subprocess.run(['podman', 'system', 'connection', 'remove', ip])
+
+def push(ip: str):
+    print('Pusing to ' + ip)
+    containers = get_remote_enabled_packages(ip)
+    for name in containers:
+        subprocess.run(['podman', 'image', 'scp', 'localhost/sitewrangler/' + name, ip + '::'])

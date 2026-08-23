@@ -17,7 +17,9 @@ def _update(force):
         if force != 'force':
             force = False
     from libsw import deploy
-    deploy.deploy(force)
+    #deploy.deploy(force)
+    for ip in deploy.get_registered_ips():
+        deploy.push(ip)
 index.register_command('update', _update)
 index.register_command('upgrade', _update) # for yum/dnf habits :)
 
@@ -72,6 +74,7 @@ def _remove(ip):
         print('Unable to remove ' + ip + ' from deployment targets. (already removed?)')
 index.register_command('remove', _remove)
 index.register_command('delete', _remove)
+index.register_command('rm', _remove)
 
 def _init(ip):
     from libsw import input_util, deploy
