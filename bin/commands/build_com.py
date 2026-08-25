@@ -111,8 +111,9 @@ def _run(first, more):
                 slug_list.append(slug)
 
     queue = build_queue.TargetedQueue(slug_list)
-    build_index.populate_slug_list(queue, slug_list)
-    build_index.populate_dependant_builders(queue)
+    populator = build_index.get_preferred_populator(queue)
+    populator.populate_slug_list(slug_list)
+    populator.populate_dependant_builders()
     if queue.run() == 0:
         print("Unable to build " + slug_list[0])
 index.register_command('run', _run, autocomplete=_avaliable_autocomplete)
