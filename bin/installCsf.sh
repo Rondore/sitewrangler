@@ -7,7 +7,7 @@ old_pwd=$(pwd)
 mkdir -p $SW_DIR/src/
 cd $SW_DIR/src/
 rm -fv csf.tgz
-wget https://download.configserver.com/csf.tgz
+wget https://github.com/sentinelfirewall/sentinel/raw/refs/heads/main/csf.tgz
 tar -xzf csf.tgz
 cd csf
 sh install.sh
